@@ -1,0 +1,8 @@
+{
+  "name": "ballyhack-fall-classic-cup",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/database": "latest"
+  }
+}
