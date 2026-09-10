@@ -120,7 +120,7 @@ function avatar(n,editable=false){
   const imgStyle=n==='Jason Wain'
     ?' style="transform:scale(1.55);transform-origin:50% 42%"'
     :'';
-  const editMark=editable && n!=='Bill McCombs'?'<em>+</em>':'';
+  const editMark='';
 
   return `<button class="player-avatar ${editable?'editable':''}" ${editable?`data-photo-player="${n}" aria-label="Upload photo for ${n}"`:''}>${src?`<img src="${src}" alt="${n}"${imgStyle}>`:`<span>${initials(n)}</span>`}${editMark}</button>`;
 }
