@@ -65,7 +65,9 @@ export default async (req) => {
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('sideGames',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
     } else if (op === 'frozen') {
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('frozen',${JSON.stringify(!!body.value)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
-    } else if (op === 'reset') {
+    } else if (op === 'clearScores') {
+      await db.sql`TRUNCATE tournament_scores`;}
+      else if (op === 'reset') {
       await db.sql`TRUNCATE tournament_scores, tournament_players, tournament_settings, tournament_charges`;
     } else return json({error:'Unknown operation'},400);
     return json({ok:true});
