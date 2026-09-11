@@ -14,3 +14,5 @@ This repository uses two deployment stages:
 5. After promotion, continue new development on `beta`.
 
 This prevents individual test edits from creating Netlify production deploys and consuming production-deploy credits.
+
+Deploy Preview entry path: `/`
