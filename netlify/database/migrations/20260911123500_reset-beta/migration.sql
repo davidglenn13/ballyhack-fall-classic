@@ -1,0 +1,1 @@
+TRUNCATE tournament_scores, tournament_players, tournament_settings, tournament_charges;
