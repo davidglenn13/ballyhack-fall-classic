@@ -27,6 +27,12 @@
     return seg.holes.find(h=>!holeComplete(r,g,h)) ?? null;
   }
 
+  function latestPressForHole(c,si,h){
+    return c.presses
+      .filter(p=>+p.segment===si && +p.fromHole<=h)
+      .sort((a,b)=>(+b.fromHole)-(+a.fromHole))[0]||null;
+  }
+
   function addWagerToPicker(r,g){
     const picker=document.querySelector('.side-game-picker');
     const scoreSide=document.querySelector('#scoreSideGame');
@@ -60,8 +66,10 @@
     const standing=liveStanding(r,g,seg);
     const loser=(!isFirstHole&&isNextHole)?standing.loser:null;
     const losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
-    const count=c.presses.filter(p=>+p.segment===si).length;
-    const alreadyHere=c.presses.some(p=>+p.segment===si && +p.fromHole===h);
+    const segmentPresses=c.presses.filter(p=>+p.segment===si);
+    const count=segmentPresses.length;
+    const alreadyHere=segmentPresses.some(p=>+p.fromHole===h);
+    const activePress=latestPressForHole(c,si,h);
 
     let status='';
     if(isFirstHole){
@@ -71,15 +79,15 @@
     }else if(!isNextHole){
       status=`Presses may only be elected on the next unplayed hole, Hole ${nextHole}.`;
     }else if(losingTeam){
-      status=`${shortTeam(losingTeam)} are currently ${standing.margin} down. Tapping Press Now starts the press on Hole ${h}.`;
+      status=`${shortTeam(losingTeam)} are currently ${standing.margin} down. Tapping Press Now starts a new press on Hole ${h}.`;
     }else{
-      status='No press available while this match is tied.';
+      status='No new press available while this match is tied.';
     }
 
     const canPress=!isFirstHole && isNextHole && !!losingTeam && !alreadyHere && c.value>0;
     const downBy=losingTeam?`${standing.margin} hole${standing.margin===1?'':'s'}`:'—';
-    const startText=canPress?`Hole ${h}`:(nextHole&&h!==nextHole?`Hole ${nextHole} only`:'—');
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Down By</span><b>${downBy}</b></div><div class="nlp-side"><span>Press starts</span><b>${startText}</b></div></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
+    const startText=activePress?`Hole ${activePress.fromHole}`:(canPress?`Hole ${h}`:(nextHole&&h!==nextHole?`Hole ${nextHole} only`:'—'));
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):activePress?(activePress.pressedBy==='a'?shortTeam(teams[0]):shortTeam(teams[1])):'—'}</b></div><div class="nlp-side"><span>Down By</span><b>${downBy}</b></div><div class="nlp-side"><span>Press starts</span><b>${startText}</b></div></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${activePress?` · Most recent press started on Hole ${activePress.fromHole}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(scoreCard) scoreCard.insertAdjacentHTML('afterend',html);
   }
