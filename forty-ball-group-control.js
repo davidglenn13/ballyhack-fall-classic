@@ -10,7 +10,7 @@
     if(!opt)return;
     opt.value=FORTY;
     if(g===2){
-      opt.textContent='40 Ball — select from 1st Group';
+      opt.textContent='40 Ball — First Group Must Select';
       opt.disabled=true;
     }else{
       opt.textContent=FORTY;
