@@ -31,8 +31,7 @@
   }
   async function persist(r,g,n,h,value){
     save();
-    const result=await apiPost({op:'fortyBallSelection',round:r,group:g,player:n,hole:h,value:!!value});
-    return result;
+    return await apiPost({op:'fortyBallSelection',round:r,group:g,player:n,hole:h,value:!!value});
   }
   function injectScoreToggles(){
     const r=roundNo(), g=groupNo();
@@ -51,10 +50,18 @@
 
     document.querySelectorAll('[data-score-player]').forEach(input=>{
       const n=input.dataset.scorePlayer, h=+input.dataset.hole;
-      const wrap=document.createElement('label');
+      const selected=!!pick[keyFor(n,h)];
+      const wrap=document.createElement('div');
       wrap.className='forty-ball-toggle';
-      const checked=!!pick[keyFor(n,h)];
-      wrap.innerHTML=`<input type="checkbox" ${checked?'checked':''} ${input.value?'':'disabled'} data-40-player="${n}" data-40-hole="${h}"> <span>${checked?'COUNTED':'Count in 40 Ball'}</span>`;
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className=selected?'forty-ball-select selected':'forty-ball-select';
+      btn.setAttribute('data-forty-player',n);
+      btn.setAttribute('data-forty-hole',String(h));
+      btn.setAttribute('aria-pressed',selected?'true':'false');
+      btn.disabled=!input.value;
+      btn.textContent=selected?'✓ COUNTED':'Count in 40 Ball';
+      wrap.appendChild(btn);
       (input.closest('.score-player')||input.parentElement).appendChild(wrap);
     });
   }
@@ -79,21 +86,40 @@
     try{
       replace40BallResults();
       injectScoreToggles();
-      document.querySelectorAll('[data-40-player]').forEach(cb=>{
-        if(cb.dataset.bound40)return; cb.dataset.bound40='1';
-        cb.addEventListener('change',async e=>{
-          const r=roundNo(),g=groupNo(),n=e.target.dataset['40Player'],h=+e.target.dataset['40Hole'];
+      document.querySelectorAll('[data-forty-player]').forEach(btn=>{
+        if(btn.dataset.boundForty)return;
+        btn.dataset.boundForty='1';
+        btn.addEventListener('click',async e=>{
+          e.preventDefault();
+          e.stopPropagation();
+          const target=e.currentTarget;
+          const r=roundNo(), g=groupNo();
+          const n=target.getAttribute('data-forty-player');
+          const h=+target.getAttribute('data-forty-hole');
           const map=selMap(r,g), k=keyFor(n,h);
-          if(e.target.checked && groupSummary(r,g).count>=40){
-            e.target.checked=false; alert('40 scores are already counted for this group. Unselect one before adding another.'); return;
+          const next=!map[k];
+          if(next && groupSummary(r,g).count>=40){
+            alert('40 scores are already counted for this group. Unselect one before adding another.');
+            return;
           }
-          map[k]=e.target.checked;
-          await persist(r,g,n,h,e.target.checked);
+          map[k]=next;
+          target.setAttribute('aria-pressed',next?'true':'false');
+          target.classList.toggle('selected',next);
+          target.textContent=next?'✓ COUNTED':'Count in 40 Ball';
+          await persist(r,g,n,h,next);
           render();
         });
       });
     }finally{busy=false;}
   }
+  const style=document.createElement('style');
+  style.textContent=`
+    .forty-ball-toggle{margin-top:8px}
+    .forty-ball-select{width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);font-weight:800;cursor:pointer}
+    .forty-ball-select.selected{background:var(--navy);color:#fff;border-color:var(--navy)}
+    .forty-ball-select:disabled{opacity:.45;cursor:not-allowed}
+  `;
+  document.head.appendChild(style);
   const obs=new MutationObserver(()=>setTimeout(bind,0));
   obs.observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(bind,0);
