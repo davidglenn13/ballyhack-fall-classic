@@ -76,8 +76,10 @@ export default async (req) => {
       if (!(r>=1&&r<=4&&g>=1&&g<=2)) return json({error:'Invalid Nassau group'},400);
       const current = (await db.sql`SELECT value FROM tournament_settings WHERE key='nassauGroups'`)[0]?.value || {};
       current[String(r)] ??= {};
-      if (body.value) current[String(r)][String(g)] = true;
-      else delete current[String(r)][String(g)];
+      if (body.value) {
+        const format = body.value === 'Nassau 6-6-6' ? 'Nassau 6-6-6' : 'Nassau 5-5-5-3';
+        current[String(r)][String(g)] = format;
+      } else delete current[String(r)][String(g)];
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('nassauGroups',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
     } else if (op === 'nassauBetConfig') {
       const r=Number(body.round), g=Number(body.group);
