@@ -16,7 +16,7 @@ async function snapshot(db) {
     db.sql`SELECT key, value FROM tournament_settings`,
     db.sql`SELECT player, amount FROM tournament_charges`
   ]);
-  const out = { scores:{}, setup:{}, access:{}, photos:{}, sideGames:{1:'None',2:'None',3:'None',4:'None'}, fortyBallSelections:{}, charges:{}, frozen:false };
+  const out = { scores:{}, setup:{}, access:{}, photos:{}, sideGames:{1:'None',2:'None',3:'None',4:'None'}, fortyBallSelections:{}, nassauGroups:{}, charges:{}, frozen:false };
   for (const s of scores) {
     out.scores[s.round_no] ??= {};
     out.scores[s.round_no][s.player] ??= {};
@@ -30,6 +30,7 @@ async function snapshot(db) {
   for (const s of settings) {
     if (s.key === 'sideGames') out.sideGames = s.value;
     if (s.key === 'fortyBallSelections') out.fortyBallSelections = s.value || {};
+    if (s.key === 'nassauGroups') out.nassauGroups = s.value || {};
     if (s.key === 'frozen') out.frozen = !!s.value;
   }
   for (const c of charges) out.charges[c.player] = Number(c.amount);
@@ -64,6 +65,14 @@ export default async (req) => {
       const current = (await db.sql`SELECT value FROM tournament_settings WHERE key='sideGames'`)[0]?.value || {1:'None',2:'None',3:'None',4:'None'};
       current[String(body.round)] = body.value;
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('sideGames',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
+    } else if (op === 'nassauGroup') {
+      const r=Number(body.round), g=Number(body.group);
+      if (!(r>=1&&r<=4&&g>=1&&g<=2)) return json({error:'Invalid Nassau group'},400);
+      const current = (await db.sql`SELECT value FROM tournament_settings WHERE key='nassauGroups'`)[0]?.value || {};
+      current[String(r)] ??= {};
+      if (body.value) current[String(r)][String(g)] = true;
+      else delete current[String(r)][String(g)];
+      await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('nassauGroups',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
     } else if (op === 'fortyBallSelection') {
       const r=Number(body.round), g=Number(body.group), h=Number(body.hole);
       if (!(r>=1&&r<=4&&g>=1&&g<=2&&h>=1&&h<=18&&PLAYERS.has(body.player))) return json({error:'Invalid 40 Ball selection'},400);
