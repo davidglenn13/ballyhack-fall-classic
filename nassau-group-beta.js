@@ -5,6 +5,16 @@
   const N55='Nassau 5-5-5-3';
   const N66='Nassau 6-6-6';
   const FORTY='40 Ball';
+  // 5-5-5-3 is scored as 5-5-5-1-1-1: holes 16, 17 and 18 are three
+  // independent one-hole matches using the three partner rotations.
+  const SEG55=[
+    {label:'Holes 1–5',holes:[1,2,3,4,5],pairing:0},
+    {label:'Holes 6–10',holes:[6,7,8,9,10],pairing:1},
+    {label:'Holes 11–15',holes:[11,12,13,14,15],pairing:2},
+    {label:'Hole 16',holes:[16],pairing:0,singleHole:true},
+    {label:'Hole 17',holes:[17],pairing:1,singleHole:true},
+    {label:'Hole 18',holes:[18],pairing:2,singleHole:true}
+  ];
   const SEG66=[
     {label:'Holes 1–6',holes:[1,2,3,4,5,6],pairing:0},
     {label:'Holes 7–12',holes:[7,8,9,10,11,12],pairing:1},
@@ -22,16 +32,15 @@
   function formatFor(r,g){
     const v=state.nassauGroups?.[r]?.[g] ?? state.nassauGroups?.[String(r)]?.[String(g)];
     if(v===N66)return N66;
-    if(v)return N55; // backward compatibility with legacy boolean true
+    if(v)return N55;
     return null;
   }
-  function segmentsFor(r,g){ return formatFor(r,g)===N66?SEG66:NASSAU_SEGMENTS; }
+  function segmentsFor(r,g){ return formatFor(r,g)===N66?SEG66:SEG55; }
   function hasNassau(r,g){ return !!formatFor(r,g); }
   function activeNassauGroups(r){ return [1,2].filter(g=>hasNassau(r,g)); }
   function firstNames(r,g){ return roundGroupNames(r,g).map(n=>n.split(' ')[0]).join(' · '); }
   function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  // Shared helpers used by Nassau wager/press/probability modules.
   window.nassauFormatFor=formatFor;
   window.nassauSegmentsFor=segmentsFor;
 
@@ -100,7 +109,9 @@
     if(state.sideGames?.[r]===FORTY){
       note.textContent='40 Ball applies to both groups for the round.';
     }else if(fmt){
-      note.textContent=`${fmt} is active only for this foursome.`;
+      note.textContent=fmt===N55
+        ?'Nassau 5-5-5-3 is active for this foursome. Holes 16, 17 and 18 are separate one-hole matches.'
+        :`${fmt} is active only for this foursome.`;
     }else{
       note.textContent='Either Nassau format can be selected independently by each foursome.';
     }
@@ -114,11 +125,11 @@
       <div class="nassau-grid">
         ${segs.map(seg=>{
           const x=nassauSegment(r,g,seg);
-          return `<div class="nassau-segment">
+          return `<div class="nassau-segment" data-single-hole="${seg.singleHole?'1':'0'}">
             <b>${seg.label}</b>
             <span>${x.teams[0].map(n=>n.split(' ')[0]).join(' + ')} vs ${x.teams[1].map(n=>n.split(' ')[0]).join(' + ')}</span>
             <strong>${x.status}</strong>
-            <small>${x.played}/${x.total} holes complete</small>
+            <small>${x.played}/${x.total} holes complete${seg.singleHole?' · Standalone one-hole match':''}</small>
           </div>`;
         }).join('')}
       </div>
@@ -171,7 +182,7 @@
       const formats=[...new Set(groups.map(g=>formatFor(r,g)))];
       const title=formats.length===1?formats[0]:'Nassau Side Games';
       const active=groups.map(g=>nassauPanel(r,g)).join('');
-      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. Each group may choose 5-5-5-3 or 6-6-6.</span></div></div>${active}${savedResults(r)}</section>`);
+      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. 5-5-5-3 uses three 5-hole matches plus three separate one-hole matches on 16–18; 6-6-6 uses three 6-hole matches.</span></div></div>${active}${savedResults(r)}</section>`);
     };
     enhanced.__nassauGroupBeta=true;
     sideGameResults=enhanced;
@@ -179,7 +190,7 @@
 
   function appendSavedResults(){
     const app=document.querySelector('#app'); if(!app)return;
-    const r=sideRound(),game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
+    const r=sideRound();
     if(activeNassauGroups(r).length)return;
     const h=app.querySelector('h2')?.textContent||'';
     if(!/Side Game|40 Ball/.test(h) || app.querySelector('.saved-side-results'))return;
