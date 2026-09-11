@@ -1,6 +1,5 @@
 /* 40 Ball beta enhancements: round-level lock, manual counted-score toggles, live relative-to-par status. */
 (() => {
-  let busy=false;
   state.fortyBallSelections ??= {};
 
   function fmtRel(v){
@@ -33,6 +32,7 @@
     save();
     return await apiPost({op:'fortyBallSelection',round:r,group:g,player:n,hole:h,value:!!value});
   }
+
   function injectScoreToggles(){
     const r=roundNo(), g=groupNo();
     document.querySelectorAll('.forty-ball-beta-note,.forty-ball-toggle').forEach(x=>x.remove());
@@ -65,6 +65,7 @@
       (input.closest('.score-player')||input.parentElement).appendChild(wrap);
     });
   }
+
   function replace40BallResults(){
     if(typeof sideGameResults!=='function')return;
     if(sideGameResults.__fortyBallBeta)return;
@@ -81,46 +82,60 @@
     enhanced.__fortyBallBeta=true;
     sideGameResults=enhanced;
   }
-  function bind(){
-    if(busy)return; busy=true;
-    try{
-      replace40BallResults();
-      injectScoreToggles();
-      document.querySelectorAll('[data-forty-player]').forEach(btn=>{
-        if(btn.dataset.boundForty)return;
-        btn.dataset.boundForty='1';
-        btn.addEventListener('click',async e=>{
-          e.preventDefault();
-          e.stopPropagation();
-          const target=e.currentTarget;
-          const r=roundNo(), g=groupNo();
-          const n=target.getAttribute('data-forty-player');
-          const h=+target.getAttribute('data-forty-hole');
-          const map=selMap(r,g), k=keyFor(n,h);
-          const next=!map[k];
-          if(next && groupSummary(r,g).count>=40){
-            alert('40 scores are already counted for this group. Unselect one before adding another.');
-            return;
-          }
-          map[k]=next;
-          target.setAttribute('aria-pressed',next?'true':'false');
-          target.classList.toggle('selected',next);
-          target.textContent=next?'✓ COUNTED':'Count in 40 Ball';
-          await persist(r,g,n,h,next);
-          render();
-        });
-      });
-    }finally{busy=false;}
+
+  async function handleToggle(target){
+    if(!target || target.disabled)return;
+    const r=roundNo(), g=groupNo();
+    const n=target.getAttribute('data-forty-player');
+    const h=+target.getAttribute('data-forty-hole');
+    const map=selMap(r,g), k=keyFor(n,h);
+    const next=!map[k];
+    if(next && groupSummary(r,g).count>=40){
+      alert('40 scores are already counted for this group. Unselect one before adding another.');
+      return;
+    }
+
+    map[k]=next;
+    target.setAttribute('aria-pressed',next?'true':'false');
+    target.classList.toggle('selected',next);
+    target.textContent=next?'✓ COUNTED':'Count in 40 Ball';
+
+    const note=document.querySelector('.forty-ball-beta-note');
+    if(note){
+      const s=groupSummary(r,g);
+      note.innerHTML=`<b>40 Ball is active for the entire round.</b> Both groups must play 40 Ball. Select exactly 40 net hole scores per group. <b>Counted: ${s.count}/40 · ${fmtRel(s.rel)}</b>`;
+    }
+
+    await persist(r,g,n,h,next);
   }
+
   const style=document.createElement('style');
   style.textContent=`
     .forty-ball-toggle{margin-top:8px}
-    .forty-ball-select{width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);font-weight:800;cursor:pointer}
+    .forty-ball-select{width:100%;min-height:44px;border:2px solid var(--navy);border-radius:10px;background:#fff;color:var(--navy);font-weight:800;cursor:pointer;touch-action:manipulation}
     .forty-ball-select.selected{background:var(--navy);color:#fff;border-color:var(--navy)}
-    .forty-ball-select:disabled{opacity:.45;cursor:not-allowed}
+    .forty-ball-select:disabled{opacity:.38;cursor:not-allowed;border-color:var(--line)}
   `;
   document.head.appendChild(style);
-  const obs=new MutationObserver(()=>setTimeout(bind,0));
-  obs.observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(bind,0);
+
+  replace40BallResults();
+
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest?.('[data-forty-player]');
+    if(!btn)return;
+    e.preventDefault();
+    e.stopPropagation();
+    handleToggle(btn);
+  },true);
+
+  const originalRender=render;
+  render=function(){
+    originalRender();
+    injectScoreToggles();
+  };
+
+  setTimeout(()=>{
+    replace40BallResults();
+    injectScoreToggles();
+  },0);
 })();
