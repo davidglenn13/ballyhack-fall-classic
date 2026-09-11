@@ -47,10 +47,11 @@
     const seg=NASSAU_SEGMENTS[si], teams=nassauTeams(roundGroupNames(r,g),seg.pairing), c=cfg(r,g);
     const loser=losingSide(r,g,seg), losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
     const count=c.presses.filter(p=>+p.segment===si).length;
+    const alreadyHere=c.presses.some(p=>+p.segment===si && +p.fromHole===h);
     const status=losingTeam
-      ?`Eligible to press: ${shortTeam(losingTeam)} (currently losing this match).`
+      ?`Eligible to press: ${shortTeam(losingTeam)}. Tapping Press Now starts the press on Hole ${h}.`
       :'No press available while this match is tied or has not started.';
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><label>Starts on<select data-nlp-hole ${losingTeam?'':'disabled'}>${seg.holes.filter(x=>x>=h).map(x=>`<option value="${x}">Hole ${x}</option>`).join('')||`<option value="${h}">Hole ${h}</option>`}</select></label><label>Press $<input data-nlp-amount type="number" min="0" step="1" inputmode="decimal" value="${c.value||''}" placeholder="${c.value||5}" ${losingTeam?'':'disabled'}></label><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" ${losingTeam?'':'disabled'}>Add Press</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Nassau wager ${c.value?`$${c.value}`:'not entered yet'}</div></section>`;
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Press starts</span><b>${losingTeam?`Hole ${h}`:'—'}</b></div><label>Press $<input data-nlp-amount type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="${c.value||''}" placeholder="${c.value||5}" ${losingTeam&&!alreadyHere?'':'disabled'}></label><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${losingTeam&&!alreadyHere?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Nassau wager ${c.value?`$${c.value}`:'not entered yet'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}</div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(scoreCard) scoreCard.insertAdjacentHTML('afterend',html);
   }
@@ -61,7 +62,7 @@
   }
 
   document.addEventListener('input',e=>{
-    const w=e.target.closest?.('[data-nlp-wager]');
+    const w=e.target.closest?.('[data-nlp-wager],[data-nlp-amount]');
     if(!w)return;
     w.value=w.value.replace(/\D/g,'').slice(0,3);
   });
@@ -77,12 +78,13 @@
 
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-nlp-add]'); if(!b)return;
-    const card=b.closest('.nlp-card'), r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
+    const card=b.closest('.nlp-card'), r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
     const loser=losingSide(r,g,seg);
     if(!loser){ alert('A press can only be entered by the team currently losing this Nassau match.'); render(); return; }
-    const amount=Math.max(0,+card.querySelector('[data-nlp-amount]').value||+c.value||0);
+    if(c.presses.some(p=>+p.segment===si && +p.fromHole===h)){ alert(`A press has already been recorded from Hole ${h}.`); render(); return; }
+    const amount=Math.min(999,Math.max(0,parseInt(card.querySelector('[data-nlp-amount]').value,10)||+c.value||0));
     if(!amount){ alert('Enter the press dollar value first.'); return; }
-    c.presses.push({id:`p${Date.now()}${Math.random().toString(36).slice(2,6)}`,segment:si,fromHole:+card.querySelector('[data-nlp-hole]').value,pressedBy:loser,amount});
+    c.presses.push({id:`p${Date.now()}${Math.random().toString(36).slice(2,6)}`,segment:si,fromHole:h,pressedBy:loser,amount});
     persist(r,g).then(()=>render());
   });
 
