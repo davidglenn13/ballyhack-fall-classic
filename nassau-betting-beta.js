@@ -23,7 +23,7 @@
     return {teams,complete,winner,status,played,total:holes.length};
   }
   function baseOutcome(r,g,seg){const x=nassauSegment(r,g,seg);return {...x,complete:x.played===x.total,winner:x.played===x.total?(x.aWins>x.bWins?'a':x.bWins>x.aWins?'b':'half'):null};}
-  function pressOutcome(r,g,p){const seg=segmentsFor(r,g)[+p.segment];if(!seg)return null;return outcome(r,g,seg,seg.holes.filter(h=>h>=+p.fromHole));}
+  function pressOutcome(r,g,p){const seg=segmentsFor(r,g)[+p.segment];if(!seg||seg.singleHole)return null;return outcome(r,g,seg,seg.holes.filter(h=>h>=+p.fromHole));}
   function resultText(o,amt){if(!amt)return 'Enter Nassau wager';if(!o?.complete)return 'Pending';if(o.winner==='half')return 'No money changes hands';return `${(o.winner==='a'?o.teams[0]:o.teams[1]).map(n=>n.split(' ')[0]).join('/')} +${money(amt)} each`;}
 
   function groupNet(r,g){
@@ -36,7 +36,7 @@
   function payments(net){const cr=[],db=[];Object.entries(net).forEach(([name,v])=>{const c=Math.round(v*100);if(c>0)cr.push({name,c});if(c<0)db.push({name,c:-c})});cr.sort((a,b)=>b.c-a.c);db.sort((a,b)=>b.c-a.c);const out=[];let i=0,j=0;while(i<db.length&&j<cr.length){const c=Math.min(db[i].c,cr[j].c);out.push({from:db[i].name,to:cr[j].name,amount:c/100});db[i].c-=c;cr[j].c-=c;if(!db[i].c)i++;if(!cr[j].c)j++;}return out;}
 
   function pressList(r,g,si){
-    const cfg=bet(r,g),seg=segmentsFor(r,g)[si];if(!seg)return '';
+    const cfg=bet(r,g),seg=segmentsFor(r,g)[si];if(!seg||seg.singleHole)return '';
     const teams=nassauTeams(roundGroupNames(r,g),seg.pairing),ps=cfg.presses.filter(p=>+p.segment===si);
     return ps.length?ps.map(p=>{const o=pressOutcome(r,g,p),who=p.pressedBy==='b'?teams[1]:teams[0];return `<div class="nb-press"><div><b>Press from hole ${p.fromHole}</b><small>${who.map(n=>n.split(' ')[0]).join('/')} pressed · ${money(p.amount)}</small></div><div><strong>${o?.status||'Pending'}</strong><small>${resultText(o,+p.amount)}</small></div><button type="button" data-nb-remove="${esc(p.id)}" data-r="${r}" data-g="${g}">×</button></div>`}).join(''):'<small class="muted">No press recorded.</small>';
   }
@@ -46,10 +46,17 @@
     document.querySelectorAll('.side-result-panel[data-side-group]').forEach(panel=>{
       if(panel.querySelector('.nb-controls'))return;
       const g=+panel.dataset.sideGroup,cfg=bet(r,g),names=roundGroupNames(r,g),net=groupNet(r,g),segments=segmentsFor(r,g),fmt=formatFor(r,g);
-      panel.insertAdjacentHTML('afterbegin',`<div class="nb-controls"><div><b>Current cash result</b><small>${names.map(n=>`${n.split(' ')[0]} ${net[n]>0?'+':''}${money(net[n])}`).join(' · ')}</small></div></div><p class="notice compact">Nassau wager: <b>${cfg.value?money(cfg.value):'not entered'}</b> · Applies to each ${fmt==='Nassau 6-6-6'?'6-hole':'5-5-5-3'} base match and its elected press.</p>`);
+      const rule=fmt==='Nassau 6-6-6'
+        ?'The wager applies to each 6-hole base match and its elected press.'
+        :'The wager applies to each 5-hole match and separately to Hole 16, Hole 17, and Hole 18. The one-hole matches cannot be pressed.';
+      panel.insertAdjacentHTML('afterbegin',`<div class="nb-controls"><div><b>Current cash result</b><small>${names.map(n=>`${n.split(' ')[0]} ${net[n]>0?'+':''}${money(net[n])}`).join(' · ')}</small></div></div><p class="notice compact">Nassau wager: <b>${cfg.value?money(cfg.value):'not entered'}</b> · ${rule}</p>`);
       panel.querySelectorAll('.nassau-segment').forEach((segEl,si)=>{
         const seg=segments[si];if(!seg)return;const o=baseOutcome(r,g,seg),small=segEl.querySelector('small');if(small)small.insertAdjacentHTML('beforeend',`<br><b>${resultText(o,cfg.value)}</b>`);
-        segEl.insertAdjacentHTML('beforeend',`<details class="nb-box"><summary>Press bet (${cfg.presses.filter(p=>+p.segment===si).length})</summary>${pressList(r,g,si)}</details>`);
+        if(seg.singleHole){
+          segEl.insertAdjacentHTML('beforeend',`<div class="nb-no-press"><b>No press</b> · Standalone one-hole match · Value ${cfg.value?money(cfg.value):'not entered'}</div>`);
+        }else{
+          segEl.insertAdjacentHTML('beforeend',`<details class="nb-box"><summary>Press bet (${cfg.presses.filter(p=>+p.segment===si).length})</summary>${pressList(r,g,si)}</details>`);
+        }
       });
     });
   }
@@ -58,10 +65,10 @@
     const app=document.querySelector('#app');if(!app||app.querySelector('.nb-settlement')||![...app.querySelectorAll('h2')].some(h=>h.textContent.trim()==='Trip Settlement'))return;
     const net=totalNet(),pay=payments(net),any=Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
     const card=[...app.querySelectorAll('.card')].find(c=>c.querySelector('h2')?.textContent.trim()==='Trip Settlement');if(!card)return;
-    card.insertAdjacentHTML('afterend',`<section class="card nb-settlement"><div class="eyebrow">CASH SIDE BETS</div><h2>Nassau Settlement</h2><p>Both Nassau formats and their elected presses are netted across all rounds. This stays separate from tournament entry and Ballyhack trip charges.</p><div class="nb-net">${PLAYERS.map(p=>{const v=net[p.name]||0;return `<div><span>${p.name}</span><strong>${v>0?'+':''}${money(v)}</strong></div>`}).join('')}</div><h3>Who Pays Who</h3>${pay.length?pay.map(x=>`<div class="nb-pay"><b>${x.from}</b><span>pays</span><b>${x.to}</b><strong>${money(x.amount)}</strong></div>`).join(''):`<p class="notice">${any?'No payment is due from completed results yet.':'Enter Nassau wagers and results will populate here automatically.'}</p>`}</section>`);
+    card.insertAdjacentHTML('afterend',`<section class="card nb-settlement"><div class="eyebrow">CASH SIDE BETS</div><h2>Nassau Settlement</h2><p>Both Nassau formats and their elected presses are netted across all rounds. In 5-5-5-3, holes 16–18 are three separate full-wager one-hole matches. This stays separate from tournament entry and Ballyhack trip charges.</p><div class="nb-net">${PLAYERS.map(p=>{const v=net[p.name]||0;return `<div><span>${p.name}</span><strong>${v>0?'+':''}${money(v)}</strong></div>`}).join('')}</div><h3>Who Pays Who</h3>${pay.length?pay.map(x=>`<div class="nb-pay"><b>${x.from}</b><span>pays</span><b>${x.to}</b><strong>${money(x.amount)}</strong></div>`).join(''):`<p class="notice">${any?'No payment is due from completed results yet.':'Enter Nassau wagers and results will populate here automatically.'}</p>`}</section>`);
   }
 
-  function style(){if(document.querySelector('#nb-style'))return;const s=document.createElement('style');s.id='nb-style';s.textContent=`.nb-controls{display:grid;grid-template-columns:1fr;gap:12px;align-items:end;margin-bottom:10px}.nb-controls>div{display:grid;gap:4px;padding:9px 11px;border-radius:10px;background:rgba(23,54,93,.07)}.nb-controls small{font-weight:700}.nb-box{margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}.nb-box summary{cursor:pointer;font-size:12px;font-weight:900}.nb-press{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}.nb-press>div{display:grid;gap:2px}.nb-press small{font-size:10px;color:var(--muted)}.nb-press button{border:0;background:transparent;font-size:22px}.nb-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.nb-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.nb-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}.nb-pay span{font-size:12px;color:var(--muted)}@media(max-width:650px){.nb-net{grid-template-columns:1fr}.nb-pay{grid-template-columns:1fr auto 1fr}.nb-pay strong{grid-column:1/-1;text-align:right}}`;document.head.appendChild(s)}
+  function style(){if(document.querySelector('#nb-style'))return;const s=document.createElement('style');s.id='nb-style';s.textContent=`.nb-controls{display:grid;grid-template-columns:1fr;gap:12px;align-items:end;margin-bottom:10px}.nb-controls>div{display:grid;gap:4px;padding:9px 11px;border-radius:10px;background:rgba(23,54,93,.07)}.nb-controls small{font-weight:700}.nb-box{margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}.nb-box summary{cursor:pointer;font-size:12px;font-weight:900}.nb-no-press{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.nb-press{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}.nb-press>div{display:grid;gap:2px}.nb-press small{font-size:10px;color:var(--muted)}.nb-press button{border:0;background:transparent;font-size:22px}.nb-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.nb-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.nb-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}.nb-pay span{font-size:12px;color:var(--muted)}@media(max-width:650px){.nb-net{grid-template-columns:1fr}.nb-pay{grid-template-columns:1fr auto 1fr}.nb-pay strong{grid-column:1/-1;text-align:right}}`;document.head.appendChild(s)}
 
   document.addEventListener('click',e=>{const d=e.target.closest?.('[data-nb-remove]');if(!d)return;const r=+d.dataset.r,g=+d.dataset.g;bet(r,g).presses=bet(r,g).presses.filter(p=>p.id!==d.dataset.nbRemove);persist(r,g).then(()=>render());});
   style();const prior=render;render=function(){prior();setTimeout(()=>{enhanceNassau();enhanceSettlement()},0)};setTimeout(()=>{enhanceNassau();enhanceSettlement()},0);
