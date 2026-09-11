@@ -45,13 +45,18 @@
     if(app.querySelector('.nlp-card'))return;
     const si=currentSegmentIndex(h); if(si<0)return;
     const seg=NASSAU_SEGMENTS[si], teams=nassauTeams(roundGroupNames(r,g),seg.pairing), c=cfg(r,g);
-    const loser=losingSide(r,g,seg), losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
+    const isFirstHole=h===seg.holes[0];
+    const loser=isFirstHole?null:losingSide(r,g,seg);
+    const losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
     const count=c.presses.filter(p=>+p.segment===si).length;
     const alreadyHere=c.presses.some(p=>+p.segment===si && +p.fromHole===h);
-    const status=losingTeam
-      ?`Eligible to press: ${shortTeam(losingTeam)}. Tapping Press Now starts the press on Hole ${h}.`
-      :'No press available while this match is tied or has not started.';
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Press starts</span><b>${losingTeam?`Hole ${h}`:'—'}</b></div><label>Press $<input data-nlp-amount type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="${c.value||''}" placeholder="${c.value||5}" ${losingTeam&&!alreadyHere?'':'disabled'}></label><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${losingTeam&&!alreadyHere?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Nassau wager ${c.value?`$${c.value}`:'not entered yet'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}</div></section>`;
+    const status=isFirstHole
+      ?`Presses are not available on the first hole of a match. The earliest press can start is Hole ${seg.holes[1]}.`
+      :losingTeam
+        ?`Eligible to press: ${shortTeam(losingTeam)}. Tapping Press Now starts the press on Hole ${h}.`
+        :'No press available while this match is tied.';
+    const canPress=!isFirstHole && !!losingTeam && !alreadyHere;
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Press starts</span><b>${canPress?`Hole ${h}`:'—'}</b></div><label>Press $<input data-nlp-amount type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="${c.value||''}" placeholder="${c.value||5}" ${canPress?'':'disabled'}></label><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Nassau wager ${c.value?`$${c.value}`:'not entered yet'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}</div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(scoreCard) scoreCard.insertAdjacentHTML('afterend',html);
   }
@@ -79,6 +84,7 @@
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-nlp-add]'); if(!b)return;
     const card=b.closest('.nlp-card'), r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
+    if(h===seg.holes[0]){ alert(`A press cannot start on the first hole of a Nassau match. The earliest press is Hole ${seg.holes[1]}.`); render(); return; }
     const loser=losingSide(r,g,seg);
     if(!loser){ alert('A press can only be entered by the team currently losing this Nassau match.'); render(); return; }
     if(c.presses.some(p=>+p.segment===si && +p.fromHole===h)){ alert(`A press has already been recorded from Hole ${h}.`); render(); return; }
