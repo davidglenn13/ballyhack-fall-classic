@@ -48,8 +48,13 @@ export default async (req) => {
 
     if (op === 'score') {
       const r=Number(body.round), h=Number(body.hole), g=Number(body.gross);
-      if (!(r>=1&&r<=4&&h>=1&&h<=18&&g>=1&&g<=20)) return json({error:'Invalid score'},400);
-      await db.sql`INSERT INTO tournament_scores (round_no,player,hole,gross,updated_at) VALUES (${r},${body.player},${h},${g},NOW()) ON CONFLICT (round_no,player,hole) DO UPDATE SET gross=EXCLUDED.gross,updated_at=NOW()`;
+      if (!(r>=1&&r<=4&&h>=1&&h<=18&&PLAYERS.has(body.player))) return json({error:'Invalid score location'},400);
+      if (!g) {
+        await db.sql`DELETE FROM tournament_scores WHERE round_no=${r} AND player=${body.player} AND hole=${h}`;
+      } else {
+        if (!(g>=1&&g<=20)) return json({error:'Invalid score'},400);
+        await db.sql`INSERT INTO tournament_scores (round_no,player,hole,gross,updated_at) VALUES (${r},${body.player},${h},${g},NOW()) ON CONFLICT (round_no,player,hole) DO UPDATE SET gross=EXCLUDED.gross,updated_at=NOW()`;
+      }
     } else if (op === 'photo') {
       const photo = String(body.photo || '');
       if (photo.length > 500000) return json({error:'Photo too large'},413);
