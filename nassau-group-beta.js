@@ -1,9 +1,15 @@
-/* Group-specific Nassau selection + saved side-game results beta. */
+/* Group-specific Nassau selection + saved side-game results beta. Supports 5-5-5-3 and 6-6-6. */
 (() => {
   state.nassauGroups ??= {};
 
-  const NASSAU='Nassau 5-5-5-3';
+  const N55='Nassau 5-5-5-3';
+  const N66='Nassau 6-6-6';
   const FORTY='40 Ball';
+  const SEG66=[
+    {label:'Holes 1–6',holes:[1,2,3,4,5,6],pairing:0},
+    {label:'Holes 7–12',holes:[7,8,9,10,11,12],pairing:1},
+    {label:'Holes 13–18',holes:[13,14,15,16,17,18],pairing:2}
+  ];
 
   function roundNo(){ return +(sessionStorage.r||1); }
   function groupNo(){ return +(sessionStorage.group||1); }
@@ -13,10 +19,21 @@
     state.nassauGroups[r] ??= {};
     return state.nassauGroups[r];
   }
-  function hasNassau(r,g){ return !!(state.nassauGroups?.[r]?.[g] || state.nassauGroups?.[String(r)]?.[String(g)]); }
+  function formatFor(r,g){
+    const v=state.nassauGroups?.[r]?.[g] ?? state.nassauGroups?.[String(r)]?.[String(g)];
+    if(v===N66)return N66;
+    if(v)return N55; // backward compatibility with legacy boolean true
+    return null;
+  }
+  function segmentsFor(r,g){ return formatFor(r,g)===N66?SEG66:NASSAU_SEGMENTS; }
+  function hasNassau(r,g){ return !!formatFor(r,g); }
   function activeNassauGroups(r){ return [1,2].filter(g=>hasNassau(r,g)); }
   function firstNames(r,g){ return roundGroupNames(r,g).map(n=>n.split(' ')[0]).join(' · '); }
   function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // Shared helpers used by Nassau wager/press/probability modules.
+  window.nassauFormatFor=formatFor;
+  window.nassauSegmentsFor=segmentsFor;
 
   async function setRoundGame(r,value){
     state.sideGames[r]=value;
@@ -25,16 +42,15 @@
   }
   async function setNassauGroup(r,g,value){
     const map=nassauMap(r);
-    if(value) map[g]=true; else delete map[g];
+    if(value) map[g]=value; else delete map[g];
     save();
-    await apiPost({op:'nassauGroup',round:r,group:g,value:!!value});
+    await apiPost({op:'nassauGroup',round:r,group:g,value:value||false});
   }
 
   function displayGameForScore(r,g){
     const roundGame=state.sideGames?.[r]||'None';
     if(roundGame===FORTY)return FORTY;
-    if(hasNassau(r,g))return NASSAU;
-    return 'None';
+    return formatFor(r,g)||'None';
   }
 
   async function handleScoreGameChange(select){
@@ -43,29 +59,35 @@
       await setNassauGroup(r,1,false);
       await setNassauGroup(r,2,false);
       await setRoundGame(r,FORTY);
-    }else if(value===NASSAU){
-      // Nassau applies only to the foursome currently selected on the Score page.
-      await setNassauGroup(r,g,true);
-      if((state.sideGames?.[r]||'None')!==NASSAU) await setRoundGame(r,NASSAU);
+    }else if(value===N55||value===N66){
+      await setNassauGroup(r,g,value);
+      await setRoundGame(r,value);
     }else{
       await setNassauGroup(r,g,false);
-      const other=g===1?2:1;
-      if(hasNassau(r,other)){
-        if((state.sideGames?.[r]||'None')!==NASSAU) await setRoundGame(r,NASSAU);
-      }else if((state.sideGames?.[r]||'None')===NASSAU){
-        await setRoundGame(r,'None');
+      const other=g===1?2:1, otherFormat=formatFor(r,other);
+      if(otherFormat){
+        await setRoundGame(r,otherFormat);
       }else if((state.sideGames?.[r]||'None')===FORTY){
-        // Leaving 40 Ball ends it for the round because 40 Ball requires both groups.
+        await setRoundGame(r,'None');
+      }else{
         await setRoundGame(r,'None');
       }
     }
     render();
   }
 
+  function ensurePickerOptions(sel){
+    if(!sel.querySelector(`option[value="${N66}"]`)){
+      const o=document.createElement('option');o.value=N66;o.textContent=N66;sel.appendChild(o);
+    }
+    [...sel.options].forEach(o=>{ if(!o.value)o.value=o.textContent.trim(); });
+  }
+
   function syncScorePicker(){
     const sel=document.querySelector('#scoreSideGame');
     if(!sel)return;
-    const r=roundNo(),g=groupNo();
+    ensurePickerOptions(sel);
+    const r=roundNo(),g=groupNo(),fmt=formatFor(r,g);
     sel.value=displayGameForScore(r,g);
     const eyebrow=sel.closest('.side-game-picker')?.querySelector('.eyebrow');
     if(eyebrow) eyebrow.textContent=(state.sideGames?.[r]===FORTY)?'SIDE GAME FOR THIS ROUND':'SIDE GAME FOR THIS GROUP';
@@ -77,20 +99,20 @@
     }
     if(state.sideGames?.[r]===FORTY){
       note.textContent='40 Ball applies to both groups for the round.';
-    }else if(hasNassau(r,g)){
-      note.textContent='Nassau is active only for this foursome.';
+    }else if(fmt){
+      note.textContent=`${fmt} is active only for this foursome.`;
     }else{
-      note.textContent='Nassau can be selected independently by each foursome.';
+      note.textContent='Either Nassau format can be selected independently by each foursome.';
     }
   }
 
   function nassauPanel(r,g){
-    const names=roundGroupNames(r,g);
-    return `<section class="side-result-panel" data-side-group="${g}">
-      <h3>${g===1?'First':'Second'} Group</h3>
+    const names=roundGroupNames(r,g),fmt=formatFor(r,g)||N55,segs=segmentsFor(r,g);
+    return `<section class="side-result-panel" data-side-group="${g}" data-nassau-format="${esc(fmt)}">
+      <h3>${g===1?'First':'Second'} Group · ${fmt.replace('Nassau ','')}</h3>
       <p>${names.map(n=>n.split(' ')[0]).join(' · ')}</p>
       <div class="nassau-grid">
-        ${NASSAU_SEGMENTS.map(seg=>{
+        ${segs.map(seg=>{
           const x=nassauSegment(r,g,seg);
           return `<div class="nassau-segment">
             <b>${seg.label}</b>
@@ -122,8 +144,9 @@
     const groups=activeNassauGroups(r);
     if(!groups.length)return '';
     return groups.map(g=>{
-      const segs=NASSAU_SEGMENTS.map(seg=>`${seg.label}: ${nassauSegment(r,g,seg).status}`).join(' · ');
-      return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · ${g===1?'First':'Second'} Group Nassau</b><span>${esc(firstNames(r,g))}</span><span>${esc(segs)}</span></div>`;
+      const fmt=formatFor(r,g)||N55;
+      const segs=segmentsFor(r,g).map(seg=>`${seg.label}: ${nassauSegment(r,g,seg).status}`).join(' · ');
+      return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · ${g===1?'First':'Second'} Group · ${esc(fmt)}</b><span>${esc(firstNames(r,g))}</span><span>${esc(segs)}</span></div>`;
     }).join('');
   }
 
@@ -133,7 +156,7 @@
       if(r===currentRound)continue;
       const game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
       if(game===FORTY) items+=fortyArchive(r);
-      else if(game===NASSAU) items+=nassauArchive(r);
+      else if(activeNassauGroups(r).length) items+=nassauArchive(r);
     }
     return `<section class="saved-side-results"><div class="eyebrow">SAVED RESULTS</div><h3>Previous Side Games</h3>${items||'<p class="notice">Completed side games from other rounds will remain here for reference.</p>'}</section>`;
   }
@@ -142,19 +165,13 @@
     if(typeof sideGameResults!=='function' || sideGameResults.__nassauGroupBeta)return;
     const prior=sideGameResults;
     const enhanced=function(){
-      const r=sideRound();
-      const game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
-      if(game!==NASSAU){
-        const html=prior();
-        // Saved results are inserted after render for non-Nassau pages.
-        return html;
-      }
-      const groups=activeNassauGroups(r);
+      const r=sideRound(),game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None',groups=activeNassauGroups(r);
+      if(game===FORTY||!groups.length){ return prior(); }
       const roundOpts=ROUNDS.map((x,i)=>`<option value="${i+1}" ${r===i+1?'selected':''}>${x.name}</option>`).join('');
-      const active=groups.length
-        ?groups.map(g=>nassauPanel(r,g)).join('')
-        :'<p class="notice">No foursome has selected Nassau for this round.</p>';
-      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>Nassau 5-5-5-3</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.length?groups.map(g=>g===1?'First Group':'Second Group').join(' · '):'None'}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. Only groups that selected Nassau are shown.</span></div></div>${active}${savedResults(r)}</section>`);
+      const formats=[...new Set(groups.map(g=>formatFor(r,g)))];
+      const title=formats.length===1?formats[0]:'Nassau Side Games';
+      const active=groups.map(g=>nassauPanel(r,g)).join('');
+      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. Each group may choose 5-5-5-3 or 6-6-6.</span></div></div>${active}${savedResults(r)}</section>`);
     };
     enhanced.__nassauGroupBeta=true;
     sideGameResults=enhanced;
@@ -162,9 +179,8 @@
 
   function appendSavedResults(){
     const app=document.querySelector('#app'); if(!app)return;
-    const r=sideRound();
-    const game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
-    if(game===NASSAU)return; // already included in custom Nassau page.
+    const r=sideRound(),game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
+    if(activeNassauGroups(r).length)return;
     const h=app.querySelector('h2')?.textContent||'';
     if(!/Side Game|40 Ball/.test(h) || app.querySelector('.saved-side-results'))return;
     const card=app.querySelector('.card');
@@ -182,7 +198,6 @@
     `;document.head.appendChild(st);
   }
 
-  // Intercept side-game changes before app.js's round-wide listener handles them.
   document.addEventListener('change',e=>{
     const sel=e.target.closest?.('#scoreSideGame');
     if(!sel)return;
