@@ -41,6 +41,11 @@ async function snapshot(db) {
 export default async (req) => {
   const db = getDatabase();
   try {
+    const url = new URL(req.url);
+    if (req.method === 'GET' && url.searchParams.get('resetOnce') === 'bhfc-20260911-1231') {
+      await db.sql`TRUNCATE tournament_scores, tournament_players, tournament_settings, tournament_charges`;
+      return json({ok:true, reset:true});
+    }
     if (req.method === 'GET') return json(await snapshot(db));
     if (req.method !== 'POST') return json({error:'Method not allowed'}, 405);
     const body = await req.json();
