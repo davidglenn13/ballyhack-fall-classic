@@ -24,7 +24,7 @@
     if(!picker||!scoreSide||!hasNassau(r,g)||picker.querySelector('.nlp-wager'))return;
     const c=cfg(r,g);
     const host=scoreSide.closest('div')||picker;
-    host.insertAdjacentHTML('beforeend',`<label class="nlp-wager">Nassau wager $<input type="number" min="0" step="1" inputmode="decimal" data-nlp-wager data-r="${r}" data-g="${g}" value="${c.value||''}" placeholder="5"></label>`);
+    host.insertAdjacentHTML('beforeend',`<label class="nlp-wager">Nassau wager $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${c.value||''}" placeholder="5" aria-label="Nassau wager amount"></label>`);
   }
 
   function removeSideGameWagerInputs(){
@@ -60,11 +60,18 @@
     const s=document.createElement('style'); s.id='nlp-style'; s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:8px;align-items:end}.nlp-grid label,.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted)}.nlp-side{padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-grid input,.nlp-grid select{width:100%}.nlp-grid button:disabled,.nlp-grid input:disabled,.nlp-grid select:disabled{opacity:.5}.nlp-foot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-grid{grid-template-columns:1fr}.nlp-grid button{width:100%}.nlp-wager{max-width:none}}`; document.head.appendChild(s);
   }
 
+  document.addEventListener('input',e=>{
+    const w=e.target.closest?.('[data-nlp-wager]');
+    if(!w)return;
+    w.value=w.value.replace(/\D/g,'').slice(0,3);
+  });
+
   document.addEventListener('change',e=>{
     const w=e.target.closest?.('[data-nlp-wager]');
     if(!w)return;
     const r=+w.dataset.r,g=+w.dataset.g,c=cfg(r,g);
-    c.value=Math.max(0,+w.value||0);
+    c.value=Math.min(999,Math.max(0,parseInt(w.value,10)||0));
+    w.value=c.value||'';
     persist(r,g).then(()=>render());
   });
 
