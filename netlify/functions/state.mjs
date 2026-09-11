@@ -16,7 +16,7 @@ async function snapshot(db) {
     db.sql`SELECT key, value FROM tournament_settings`,
     db.sql`SELECT player, amount FROM tournament_charges`
   ]);
-  const out = { scores:{}, setup:{}, access:{}, photos:{}, sideGames:{1:'None',2:'None',3:'None',4:'None'}, fortyBallSelections:{}, nassauGroups:{}, nassauBets:{}, charges:{}, frozen:false };
+  const out = { scores:{}, setup:{}, access:{}, photos:{}, sideGames:{1:'None',2:'None',3:'None',4:'None'}, fortyBallSelections:{}, fortyBallBets:{}, nassauGroups:{}, nassauBets:{}, charges:{}, frozen:false };
   for (const s of scores) {
     out.scores[s.round_no] ??= {};
     out.scores[s.round_no][s.player] ??= {};
@@ -30,6 +30,7 @@ async function snapshot(db) {
   for (const s of settings) {
     if (s.key === 'sideGames') out.sideGames = s.value;
     if (s.key === 'fortyBallSelections') out.fortyBallSelections = s.value || {};
+    if (s.key === 'fortyBallBets') out.fortyBallBets = s.value || {};
     if (s.key === 'nassauGroups') out.nassauGroups = s.value || {};
     if (s.key === 'nassauBets') out.nassauBets = s.value || {};
     if (s.key === 'frozen') out.frozen = !!s.value;
@@ -107,6 +108,12 @@ export default async (req) => {
       if (body.value) current[String(r)][String(g)][key] = true;
       else delete current[String(r)][String(g)][key];
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('fortyBallSelections',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
+    } else if (op === 'fortyBallBet') {
+      const r=Number(body.round), value=Math.max(0,Math.min(999,Number(body.value||0)));
+      if (!(r>=1&&r<=4)) return json({error:'Invalid 40 Ball wager'},400);
+      const current = (await db.sql`SELECT value FROM tournament_settings WHERE key='fortyBallBets'`)[0]?.value || {};
+      current[String(r)] = value;
+      await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('fortyBallBets',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
     } else if (op === 'frozen') {
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('frozen',${JSON.stringify(!!body.value)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
     } else if (op === 'clearScores') {
