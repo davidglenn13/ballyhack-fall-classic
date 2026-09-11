@@ -57,7 +57,6 @@
     const live=enteredHolePoints(r,name);
     const remaining=18-live.holes;
     if(!remaining)return live.pts;
-
     const mean=remaining*BASE_PPH;
     const sd=Math.sqrt(remaining)*SD_PER_HOLE;
     const simulated=Math.round(mean+normal(rand)*sd);
@@ -68,7 +67,6 @@
     const signature=scoreSignature();
     if(cached && signature===lastSignature)return cached;
     lastSignature=signature;
-
     const rand=rng(hashString('ballyhack-2026|'+signature));
     const playerWins=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
     const cottageWins={1:0,2:0};
@@ -77,14 +75,9 @@
 
     for(let s=0;s<SIMS;s++){
       const rounds={};
-      PLAYERS.forEach(p=>{
-        rounds[p.name]=[1,2,3,4].map(r=>simulateRound(r,p.name,rand));
-      });
+      PLAYERS.forEach(p=>{ rounds[p.name]=[1,2,3,4].map(r=>simulateRound(r,p.name,rand)); });
 
-      const finalTotals=PLAYERS.map(p=>({
-        name:p.name,
-        total:[...rounds[p.name]].sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)
-      }));
+      const finalTotals=PLAYERS.map(p=>({name:p.name,total:[...rounds[p.name]].sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)}));
       const best=Math.max(...finalTotals.map(x=>x.total));
       const winners=finalTotals.filter(x=>x.total===best);
       winners.forEach(x=>playerWins[x.name]+=1/winners.length);
@@ -98,24 +91,13 @@
         }
         projectedCottage[c]+=cottageTotals[c];
       }
-
-      if(cottageTotals[1]===cottageTotals[2]){
-        cottageWins[1]+=.5;
-        cottageWins[2]+=.5;
-      }else{
-        cottageWins[cottageTotals[1]>cottageTotals[2]?1:2]++;
-      }
+      if(cottageTotals[1]===cottageTotals[2]){ cottageWins[1]+=.5; cottageWins[2]+=.5; }
+      else cottageWins[cottageTotals[1]>cottageTotals[2]?1:2]++;
     }
 
     cached={
-      players:Object.fromEntries(PLAYERS.map(p=>[p.name,{
-        win:100*playerWins[p.name]/SIMS,
-        projected:projectedPlayer[p.name]/SIMS
-      }])),
-      cottages:{
-        1:{win:100*cottageWins[1]/SIMS,projected:projectedCottage[1]/SIMS},
-        2:{win:100*cottageWins[2]/SIMS,projected:projectedCottage[2]/SIMS}
-      }
+      players:Object.fromEntries(PLAYERS.map(p=>[p.name,{win:100*playerWins[p.name]/SIMS,projected:projectedPlayer[p.name]/SIMS}])),
+      cottages:{1:{win:100*cottageWins[1]/SIMS,projected:projectedCottage[1]/SIMS},2:{win:100*cottageWins[2]/SIMS,projected:projectedCottage[2]/SIMS}}
     };
     return cached;
   }
@@ -145,17 +127,7 @@
 
   function individualPanel(model){
     const ordered=[...PLAYERS].sort((a,b)=>model.players[b.name].win-model.players[a.name].win);
-    return `
-      <div class="prob-panel" data-win-prob="individual">
-        <h3>Win Probability</h3>
-        <p class="prob-note">15,000 simulations. Scores already entered are fixed; remaining golf is simulated. Ties split win probability.</p>
-        <div class="prob-grid">
-          ${ordered.map(p=>{
-            const x=model.players[p.name];
-            return `<div class="prob-item"><div class="prob-name">${p.name}</div><div class="prob-value">${pct(x.win)}</div><div class="prob-proj">Projected best-3: ${x.projected.toFixed(1)}</div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`;
-          }).join('')}
-        </div>
-      </div>`;
+    return `<div class="prob-panel" data-win-prob="individual"><h3>Win Probability</h3><p class="prob-note">15,000 simulations. Scores already entered are fixed; remaining golf is simulated. Ties split win probability.</p><div class="prob-grid">${ordered.map(p=>{const x=model.players[p.name];return `<div class="prob-item"><div class="prob-name">${p.name}</div><div class="prob-value">${pct(x.win)}</div><div class="prob-proj">Projected best-3: ${x.projected.toFixed(1)}</div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`;}).join('')}</div></div>`;
   }
 
   function inject(){
@@ -170,7 +142,7 @@
       if(!heading)return;
       const title=heading.textContent.trim();
 
-      if(title==='Live Individual Standings' && !app.querySelector('[data-win-prob="individual"]')){
+      if(title.startsWith('CHASE FOR THE CUP') && !app.querySelector('[data-win-prob="individual"]')){
         const card=heading.closest('.card');
         if(card)card.insertAdjacentHTML('beforeend',individualPanel(model));
       }
@@ -182,9 +154,7 @@
         const x=model.cottages[c];
         card.insertAdjacentHTML('beforeend',`<div class="cottage-prob" data-cottage-prob="${c}"><strong>${pct(x.win)}</strong><span>Chance to win Cottage Cup · projected final ${x.projected.toFixed(1)} pts</span><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`);
       });
-    } finally {
-      injecting=false;
-    }
+    } finally { injecting=false; }
   }
 
   const observer=new MutationObserver(()=>queueMicrotask(inject));
