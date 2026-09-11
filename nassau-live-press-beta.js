@@ -94,7 +94,7 @@
 
     const canPress=!isFirstHole && isNextHole && !!losingTeam && !alreadyHere && c.value>0;
     const downBy=losingTeam?`${standing.margin} hole${standing.margin===1?'':'s'}`:'—';
-    const startText=activePress?`Hole ${activePress.fromHole}`:(canPress?`Hole ${h}`:(nextHole&&h!==nextHole?`Hole ${nextHole} only`:'—'));
+    const startText=activePress?`Hole ${activePress.fromHole}`:(canPress?`Hole ${h}`:'—');
     const pressSideText=losingTeam
       ?shortTeam(losingTeam)
       :activePress
