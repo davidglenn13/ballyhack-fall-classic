@@ -27,6 +27,22 @@
     return seg.holes.find(h=>!holeComplete(r,g,h)) ?? null;
   }
 
+  function sanitizePresses(r,g,si,seg,c,nextHole){
+    if(nextHole===null)return false;
+    const minStart=seg.holes[1];
+    const before=c.presses.length;
+    c.presses=c.presses.filter(p=>{
+      if(+p.segment!==si)return true;
+      const start=+p.fromHole;
+      return start>=minStart && start<=nextHole;
+    });
+    if(c.presses.length!==before){
+      persist(r,g).catch(()=>{});
+      return true;
+    }
+    return false;
+  }
+
   function latestPressInSegment(c,si){
     return c.presses
       .filter(p=>+p.segment===si)
@@ -61,6 +77,9 @@
     const si=currentSegmentIndex(h); if(si<0)return;
     const seg=NASSAU_SEGMENTS[si], teams=nassauTeams(roundGroupNames(r,g),seg.pairing), c=cfg(r,g);
     const firstHole=seg.holes[0], nextHole=nextUnplayedHole(r,g,seg);
+
+    sanitizePresses(r,g,si,seg,c,nextHole);
+
     const isFirstHole=h===firstHole;
     const isNextHole=h===nextHole;
     const standing=liveStanding(r,g,seg);
@@ -129,6 +148,7 @@
     const b=e.target.closest?.('[data-nlp-add]'); if(!b)return;
     const r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
     const nextHole=nextUnplayedHole(r,g,seg);
+    sanitizePresses(r,g,si,seg,c,nextHole);
     if(h===seg.holes[0]){ alert(`A press cannot start on the first hole of a Nassau match. The earliest press is Hole ${seg.holes[1]}.`); render(); return; }
     if(h!==nextHole){ alert(`A press can only be elected on the next unplayed hole, Hole ${nextHole}.`); render(); return; }
     const loser=liveStanding(r,g,seg).loser;
