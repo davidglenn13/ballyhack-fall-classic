@@ -12,10 +12,11 @@
   const currentSegmentIndex=h=>NASSAU_SEGMENTS.findIndex(s=>s.holes.includes(h));
   const shortTeam=t=>t.map(n=>n.split(' ')[0]).join(' / ');
 
-  function losingSide(r,g,seg){
+  function liveStanding(r,g,seg){
     const x=nassauSegment(r,g,seg);
-    if(!x.played || x.aWins===x.bWins) return null;
-    return x.aWins<x.bWins?'a':'b';
+    const margin=Math.abs(x.aWins-x.bWins);
+    const loser=!x.played||x.aWins===x.bWins?null:(x.aWins<x.bWins?'a':'b');
+    return {x,margin,loser};
   }
 
   function addWagerToPicker(r,g){
@@ -46,24 +47,26 @@
     const si=currentSegmentIndex(h); if(si<0)return;
     const seg=NASSAU_SEGMENTS[si], teams=nassauTeams(roundGroupNames(r,g),seg.pairing), c=cfg(r,g);
     const isFirstHole=h===seg.holes[0];
-    const loser=isFirstHole?null:losingSide(r,g,seg);
+    const standing=liveStanding(r,g,seg);
+    const loser=isFirstHole?null:standing.loser;
     const losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
     const count=c.presses.filter(p=>+p.segment===si).length;
     const alreadyHere=c.presses.some(p=>+p.segment===si && +p.fromHole===h);
     const status=isFirstHole
       ?`Presses are not available on the first hole of a match. The earliest press can start is Hole ${seg.holes[1]}.`
       :losingTeam
-        ?`Eligible to press: ${shortTeam(losingTeam)}. Tapping Press Now starts the press on Hole ${h}.`
+        ?`${shortTeam(losingTeam)} are currently ${standing.margin} down. Tapping Press Now starts the press on Hole ${h}.`
         :'No press available while this match is tied.';
     const canPress=!isFirstHole && !!losingTeam && !alreadyHere && c.value>0;
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Press starts</span><b>${canPress?`Hole ${h}`:'—'}</b></div><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
+    const downBy=losingTeam?`${standing.margin} hole${standing.margin===1?'':'s'}`:'—';
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Down By</span><b>${downBy}</b></div><div class="nlp-side"><span>Press starts</span><b>${canPress?`Hole ${h}`:'—'}</b></div></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(scoreCard) scoreCard.insertAdjacentHTML('afterend',html);
   }
 
   function style(){
     if(document.querySelector('#nlp-style'))return;
-    const s=document.createElement('style'); s.id='nlp-style'; s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:8px;align-items:end}.nlp-grid label,.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted)}.nlp-side{padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-grid button:disabled{opacity:.5}.nlp-foot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-grid{grid-template-columns:1fr}.nlp-grid button{width:100%}.nlp-wager{max-width:none}}`; document.head.appendChild(s);
+    const s=document.createElement('style'); s.id='nlp-style'; s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-grid{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}.nlp-grid button{min-width:120px}.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted);padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-grid button:disabled{opacity:.5}.nlp-foot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-grid{grid-template-columns:1fr 1fr}.nlp-grid button{width:100%;min-width:0}.nlp-grid .nlp-side:last-child{grid-column:2}.nlp-wager{max-width:none}}`; document.head.appendChild(s);
   }
 
   document.addEventListener('input',e=>{
@@ -85,7 +88,7 @@
     const b=e.target.closest?.('[data-nlp-add]'); if(!b)return;
     const r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
     if(h===seg.holes[0]){ alert(`A press cannot start on the first hole of a Nassau match. The earliest press is Hole ${seg.holes[1]}.`); render(); return; }
-    const loser=losingSide(r,g,seg);
+    const loser=liveStanding(r,g,seg).loser;
     if(!loser){ alert('A press can only be entered by the team currently losing this Nassau match.'); render(); return; }
     if(c.presses.some(p=>+p.segment===si && +p.fromHole===h)){ alert(`A press has already been recorded from Hole ${h}.`); render(); return; }
     const amount=Math.min(999,Math.max(0,+c.value||0));
