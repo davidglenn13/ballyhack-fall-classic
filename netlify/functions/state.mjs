@@ -16,7 +16,7 @@ async function snapshot(db) {
     db.sql`SELECT key, value FROM tournament_settings`,
     db.sql`SELECT player, amount FROM tournament_charges`
   ]);
-  const out = { scores:{}, setup:{}, access:{}, photos:{}, sideGames:{1:'None',2:'None',3:'None',4:'None'}, fortyBallSelections:{}, charges:{}, frozen:false };
+  const out = { scores:{}, setup:{}, access:{}, photos:{}, sideGames:{1:'None',2:'None',3:'None',4:'None'}, fortyBallSelections:{}, nassauGroups:{}, charges:{}, frozen:false };
   for (const s of scores) {
     out.scores[s.round_no] ??= {};
     out.scores[s.round_no][s.player] ??= {};
@@ -30,6 +30,7 @@ async function snapshot(db) {
   for (const s of settings) {
     if (s.key === 'sideGames') out.sideGames = s.value;
     if (s.key === 'fortyBallSelections') out.fortyBallSelections = s.value || {};
+    if (s.key === 'nassauGroups') out.nassauGroups = s.value || {};
     if (s.key === 'frozen') out.frozen = !!s.value;
   }
   for (const c of charges) out.charges[c.player] = Number(c.amount);
@@ -47,8 +48,13 @@ export default async (req) => {
 
     if (op === 'score') {
       const r=Number(body.round), h=Number(body.hole), g=Number(body.gross);
-      if (!(r>=1&&r<=4&&h>=1&&h<=18&&g>=1&&g<=20)) return json({error:'Invalid score'},400);
-      await db.sql`INSERT INTO tournament_scores (round_no,player,hole,gross,updated_at) VALUES (${r},${body.player},${h},${g},NOW()) ON CONFLICT (round_no,player,hole) DO UPDATE SET gross=EXCLUDED.gross,updated_at=NOW()`;
+      if (!(r>=1&&r<=4&&h>=1&&h<=18&&PLAYERS.has(body.player))) return json({error:'Invalid score location'},400);
+      if (!g) {
+        await db.sql`DELETE FROM tournament_scores WHERE round_no=${r} AND player=${body.player} AND hole=${h}`;
+      } else {
+        if (!(g>=1&&g<=20)) return json({error:'Invalid score'},400);
+        await db.sql`INSERT INTO tournament_scores (round_no,player,hole,gross,updated_at) VALUES (${r},${body.player},${h},${g},NOW()) ON CONFLICT (round_no,player,hole) DO UPDATE SET gross=EXCLUDED.gross,updated_at=NOW()`;
+      }
     } else if (op === 'photo') {
       const photo = String(body.photo || '');
       if (photo.length > 500000) return json({error:'Photo too large'},413);
@@ -64,6 +70,14 @@ export default async (req) => {
       const current = (await db.sql`SELECT value FROM tournament_settings WHERE key='sideGames'`)[0]?.value || {1:'None',2:'None',3:'None',4:'None'};
       current[String(body.round)] = body.value;
       await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('sideGames',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
+    } else if (op === 'nassauGroup') {
+      const r=Number(body.round), g=Number(body.group);
+      if (!(r>=1&&r<=4&&g>=1&&g<=2)) return json({error:'Invalid Nassau group'},400);
+      const current = (await db.sql`SELECT value FROM tournament_settings WHERE key='nassauGroups'`)[0]?.value || {};
+      current[String(r)] ??= {};
+      if (body.value) current[String(r)][String(g)] = true;
+      else delete current[String(r)][String(g)];
+      await db.sql`INSERT INTO tournament_settings (key,value,updated_at) VALUES ('nassauGroups',${JSON.stringify(current)}::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`;
     } else if (op === 'fortyBallSelection') {
       const r=Number(body.round), g=Number(body.group), h=Number(body.hole);
       if (!(r>=1&&r<=4&&g>=1&&g<=2&&h>=1&&h<=18&&PLAYERS.has(body.player))) return json({error:'Invalid 40 Ball selection'},400);
