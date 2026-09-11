@@ -1,4 +1,4 @@
-/* Add Nassau wager and manual press entry directly to the live Score page. Only the team currently down may press. */
+/* Add Nassau wager and manual press entry directly to the live Score page. Only the team currently down may press, and only on the next unplayed hole. */
 (() => {
   const hasNassau=(r,g)=>!!(state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)]);
   const cfg=(r,g)=>{
@@ -17,6 +17,14 @@
     const margin=Math.abs(x.aWins-x.bWins);
     const loser=!x.played||x.aWins===x.bWins?null:(x.aWins<x.bWins?'a':'b');
     return {x,margin,loser};
+  }
+
+  function holeComplete(r,g,h){
+    return roundGroupNames(r,g).every(n=>+state.scores?.[r]?.[n]?.[h]>0);
+  }
+
+  function nextUnplayedHole(r,g,seg){
+    return seg.holes.find(h=>!holeComplete(r,g,h)) ?? null;
   }
 
   function addWagerToPicker(r,g){
@@ -46,20 +54,32 @@
     if(app.querySelector('.nlp-card'))return;
     const si=currentSegmentIndex(h); if(si<0)return;
     const seg=NASSAU_SEGMENTS[si], teams=nassauTeams(roundGroupNames(r,g),seg.pairing), c=cfg(r,g);
-    const isFirstHole=h===seg.holes[0];
+    const firstHole=seg.holes[0], nextHole=nextUnplayedHole(r,g,seg);
+    const isFirstHole=h===firstHole;
+    const isNextHole=h===nextHole;
     const standing=liveStanding(r,g,seg);
-    const loser=isFirstHole?null:standing.loser;
+    const loser=(!isFirstHole&&isNextHole)?standing.loser:null;
     const losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
     const count=c.presses.filter(p=>+p.segment===si).length;
     const alreadyHere=c.presses.some(p=>+p.segment===si && +p.fromHole===h);
-    const status=isFirstHole
-      ?`Presses are not available on the first hole of a match. The earliest press can start is Hole ${seg.holes[1]}.`
-      :losingTeam
-        ?`${shortTeam(losingTeam)} are currently ${standing.margin} down. Tapping Press Now starts the press on Hole ${h}.`
-        :'No press available while this match is tied.';
-    const canPress=!isFirstHole && !!losingTeam && !alreadyHere && c.value>0;
+
+    let status='';
+    if(isFirstHole){
+      status=`Presses are not available on the first hole of a match. The earliest press can start is Hole ${seg.holes[1]}.`;
+    }else if(nextHole===null){
+      status='This Nassau match is complete.';
+    }else if(!isNextHole){
+      status=`Presses may only be elected on the next unplayed hole, Hole ${nextHole}.`;
+    }else if(losingTeam){
+      status=`${shortTeam(losingTeam)} are currently ${standing.margin} down. Tapping Press Now starts the press on Hole ${h}.`;
+    }else{
+      status='No press available while this match is tied.';
+    }
+
+    const canPress=!isFirstHole && isNextHole && !!losingTeam && !alreadyHere && c.value>0;
     const downBy=losingTeam?`${standing.margin} hole${standing.margin===1?'':'s'}`:'—';
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Down By</span><b>${downBy}</b></div><div class="nlp-side"><span>Press starts</span><b>${canPress?`Hole ${h}`:'—'}</b></div></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
+    const startText=canPress?`Hole ${h}`:(nextHole&&h!==nextHole?`Hole ${nextHole} only`:'—');
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Down By</span><b>${downBy}</b></div><div class="nlp-side"><span>Press starts</span><b>${startText}</b></div></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(scoreCard) scoreCard.insertAdjacentHTML('afterend',html);
   }
@@ -87,7 +107,9 @@
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-nlp-add]'); if(!b)return;
     const r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
+    const nextHole=nextUnplayedHole(r,g,seg);
     if(h===seg.holes[0]){ alert(`A press cannot start on the first hole of a Nassau match. The earliest press is Hole ${seg.holes[1]}.`); render(); return; }
+    if(h!==nextHole){ alert(`A press can only be elected on the next unplayed hole, Hole ${nextHole}.`); render(); return; }
     const loser=liveStanding(r,g,seg).loser;
     if(!loser){ alert('A press can only be entered by the team currently losing this Nassau match.'); render(); return; }
     if(c.presses.some(p=>+p.segment===si && +p.fromHole===h)){ alert(`A press has already been recorded from Hole ${h}.`); render(); return; }
