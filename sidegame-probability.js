@@ -79,7 +79,7 @@
   function ensureStyle(){
     if(document.getElementById('side-prob-style'))return;
     const st=document.createElement('style');st.id='side-prob-style';st.textContent=`
-      .side-probability{margin:14px 0;padding:13px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+      .side-probability{margin:14px 0 0;padding:13px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
       .side-probability h3{margin:0 0 8px}.side-prob-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
       .side-prob-row:first-of-type{border-top:0}.side-prob-row strong{font-size:1.2rem;color:var(--navy)}.side-prob-note{font-size:11px;color:var(--muted);margin-top:8px}
       .nassau-prob{margin-top:8px;font-size:11px;font-weight:800;color:var(--navy)}
@@ -97,7 +97,8 @@
       const p=fortyProb(r), first=roundGroupNames(r,1).map(n=>n.split(' ')[0]).join(' · '), second=roundGroupNames(r,2).map(n=>n.split(' ')[0]).join(' · ');
       const box=document.createElement('div');box.className='side-probability';box.dataset.sideProb='40';
       box.innerHTML=`<h3>Probability to Win</h3><div class="side-prob-row"><span>First Group<br><small>${first}</small></span><strong>${pct(p.a)}</strong></div><div class="side-prob-row"><span>Second Group<br><small>${second}</small></span><strong>${pct(p.b)}</strong></div>${p.tie>.05?`<div class="side-prob-row"><span>Tie</span><strong>${pct(p.tie)}</strong></div>`:''}<div class="side-prob-note">5,000 simulations using scores already entered and the remaining selections needed to reach 40.</div>`;
-      const card=app.querySelector('.card'); card?.querySelector('.side-summary')?.insertAdjacentElement('afterend',box);
+      const card=app.querySelector('.card');
+      if(card)card.appendChild(box);
     }
 
     if(game==='Nassau 5-5-5-3'){
