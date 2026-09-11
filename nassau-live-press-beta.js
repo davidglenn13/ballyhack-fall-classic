@@ -55,19 +55,19 @@
       :losingTeam
         ?`Eligible to press: ${shortTeam(losingTeam)}. Tapping Press Now starts the press on Hole ${h}.`
         :'No press available while this match is tied.';
-    const canPress=!isFirstHole && !!losingTeam && !alreadyHere;
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Press starts</span><b>${canPress?`Hole ${h}`:'—'}</b></div><label>Press $<input data-nlp-amount type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="${c.value||''}" placeholder="${c.value||5}" ${canPress?'':'disabled'}></label><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Nassau wager ${c.value?`$${c.value}`:'not entered yet'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}</div></section>`;
+    const canPress=!isFirstHole && !!losingTeam && !alreadyHere && c.value>0;
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU</div><h2>Press Bet</h2><p class="muted">Current match: ${seg.label}. ${status}</p><div class="nlp-grid"><div class="nlp-side"><span>Pressing side</span><b>${losingTeam?shortTeam(losingTeam):'—'}</b></div><div class="nlp-side"><span>Press starts</span><b>${canPress?`Hole ${h}`:'—'}</b></div><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${h}" ${canPress?'':'disabled'}>${alreadyHere?'Press Recorded':'Press Now'}</button></div><div class="nlp-foot"><b>${count}</b> press${count===1?'':'es'} recorded in this match · Each press uses the Nassau wager ${c.value?`($${c.value})`:'amount'}${alreadyHere?` · Press already recorded from Hole ${h}`:''}${!c.value?' · Enter the Nassau wager above before pressing.':''}</div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(scoreCard) scoreCard.insertAdjacentHTML('afterend',html);
   }
 
   function style(){
     if(document.querySelector('#nlp-style'))return;
-    const s=document.createElement('style'); s.id='nlp-style'; s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:8px;align-items:end}.nlp-grid label,.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted)}.nlp-side{padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-grid input,.nlp-grid select{width:100%}.nlp-grid button:disabled,.nlp-grid input:disabled,.nlp-grid select:disabled{opacity:.5}.nlp-foot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-grid{grid-template-columns:1fr}.nlp-grid button{width:100%}.nlp-wager{max-width:none}}`; document.head.appendChild(s);
+    const s=document.createElement('style'); s.id='nlp-style'; s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:8px;align-items:end}.nlp-grid label,.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted)}.nlp-side{padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-grid button:disabled{opacity:.5}.nlp-foot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-grid{grid-template-columns:1fr}.nlp-grid button{width:100%}.nlp-wager{max-width:none}}`; document.head.appendChild(s);
   }
 
   document.addEventListener('input',e=>{
-    const w=e.target.closest?.('[data-nlp-wager],[data-nlp-amount]');
+    const w=e.target.closest?.('[data-nlp-wager]');
     if(!w)return;
     w.value=w.value.replace(/\D/g,'').slice(0,3);
   });
@@ -83,13 +83,13 @@
 
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-nlp-add]'); if(!b)return;
-    const card=b.closest('.nlp-card'), r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
+    const r=+b.dataset.r, g=+b.dataset.g, si=+b.dataset.si, h=+b.dataset.hole, c=cfg(r,g), seg=NASSAU_SEGMENTS[si];
     if(h===seg.holes[0]){ alert(`A press cannot start on the first hole of a Nassau match. The earliest press is Hole ${seg.holes[1]}.`); render(); return; }
     const loser=losingSide(r,g,seg);
     if(!loser){ alert('A press can only be entered by the team currently losing this Nassau match.'); render(); return; }
     if(c.presses.some(p=>+p.segment===si && +p.fromHole===h)){ alert(`A press has already been recorded from Hole ${h}.`); render(); return; }
-    const amount=Math.min(999,Math.max(0,parseInt(card.querySelector('[data-nlp-amount]').value,10)||+c.value||0));
-    if(!amount){ alert('Enter the press dollar value first.'); return; }
+    const amount=Math.min(999,Math.max(0,+c.value||0));
+    if(!amount){ alert('Enter the Nassau wager amount first.'); return; }
     c.presses.push({id:`p${Date.now()}${Math.random().toString(36).slice(2,6)}`,segment:si,fromHole:h,pressedBy:loser,amount});
     persist(r,g).then(()=>render());
   });
