@@ -91,7 +91,7 @@
     const app=document.querySelector('#app'); if(!app)return;
     const r=roundNo(), game=state.sideGames?.[r]||'None';
     const h=app.querySelector('h2')?.textContent||'';
-    if(!/Side Game|40 Ball/.test(h))return;
+    if(!/Side Game|40 Ball|Nassau/.test(h))return;
 
     if(game==='40 Ball'&&!app.querySelector('[data-side-prob="40"]')){
       const p=fortyProb(r), first=roundGroupNames(r,1).map(n=>n.split(' ')[0]).join(' · '), second=roundGroupNames(r,2).map(n=>n.split(' ')[0]).join(' · ');
@@ -104,7 +104,7 @@
     if(game==='Nassau 5-5-5-3'){
       const panels=[...app.querySelectorAll('.side-result-panel')];
       panels.forEach((panel,idx)=>{
-        const g=idx+1; const segEls=[...panel.querySelectorAll('.nassau-segment')];
+        const g=+(panel.dataset.sideGroup||idx+1); const segEls=[...panel.querySelectorAll('.nassau-segment')];
         segEls.forEach((el,i)=>{
           if(el.querySelector('.nassau-prob'))return;
           const seg=NASSAU_SEGMENTS[i],x=nassauSegment(r,g,seg),p=nassauProb(r,g,seg);
