@@ -1,12 +1,11 @@
-/* Group-specific Nassau selection + saved side-game results beta. Supports 5-5-5-3 and 6-6-6. */
+/* Group-specific Nassau selection + saved side-game results beta. Supports 5-5-5-1-1-1 and 6-6-6. */
 (() => {
   state.nassauGroups ??= {};
 
-  const N55='Nassau 5-5-5-3';
+  const N55='Nassau 5-5-5-1-1-1';
+  const LEGACY_N55='Nassau 5-5-5-3';
   const N66='Nassau 6-6-6';
   const FORTY='40 Ball';
-  // 5-5-5-3 is scored as 5-5-5-1-1-1: holes 16, 17 and 18 are three
-  // independent one-hole matches using the three partner rotations.
   const SEG55=[
     {label:'Holes 1–5',holes:[1,2,3,4,5],pairing:0},
     {label:'Holes 6–10',holes:[6,7,8,9,10],pairing:1},
@@ -32,7 +31,7 @@
   function formatFor(r,g){
     const v=state.nassauGroups?.[r]?.[g] ?? state.nassauGroups?.[String(r)]?.[String(g)];
     if(v===N66)return N66;
-    if(v)return N55;
+    if(v===N55||v===LEGACY_N55||v)return N55;
     return null;
   }
   function segmentsFor(r,g){ return formatFor(r,g)===N66?SEG66:SEG55; }
@@ -86,10 +85,15 @@
   }
 
   function ensurePickerOptions(sel){
+    [...sel.options].forEach(o=>{ if(!o.value)o.value=o.textContent.trim(); });
+    const legacy=[...sel.options].find(o=>o.value===LEGACY_N55||o.textContent.trim()===LEGACY_N55);
+    if(legacy){ legacy.value=N55; legacy.textContent=N55; }
+    if(!sel.querySelector(`option[value="${N55}"]`)){
+      const o=document.createElement('option');o.value=N55;o.textContent=N55;sel.appendChild(o);
+    }
     if(!sel.querySelector(`option[value="${N66}"]`)){
       const o=document.createElement('option');o.value=N66;o.textContent=N66;sel.appendChild(o);
     }
-    [...sel.options].forEach(o=>{ if(!o.value)o.value=o.textContent.trim(); });
   }
 
   function syncScorePicker(){
@@ -110,7 +114,7 @@
       note.textContent='40 Ball applies to both groups for the round.';
     }else if(fmt){
       note.textContent=fmt===N55
-        ?'Nassau 5-5-5-3 is active for this foursome. Holes 16, 17 and 18 are separate one-hole matches.'
+        ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16, 17 and 18 are separate one-hole matches.'
         :`${fmt} is active only for this foursome.`;
     }else{
       note.textContent='Either Nassau format can be selected independently by each foursome.';
@@ -182,7 +186,7 @@
       const formats=[...new Set(groups.map(g=>formatFor(r,g)))];
       const title=formats.length===1?formats[0]:'Nassau Side Games';
       const active=groups.map(g=>nassauPanel(r,g)).join('');
-      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. 5-5-5-3 uses three 5-hole matches plus three separate one-hole matches on 16–18; 6-6-6 uses three 6-hole matches.</span></div></div>${active}${savedResults(r)}</section>`);
+      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. 5-5-5-1-1-1 uses three 5-hole matches plus three separate one-hole matches on 16–18; 6-6-6 uses three 6-hole matches.</span></div></div>${active}${savedResults(r)}</section>`);
     };
     enhanced.__nassauGroupBeta=true;
     sideGameResults=enhanced;
