@@ -39,8 +39,8 @@
     const x=roundGross(r,n);
     const holes=[...Array(18)].map((_,i)=>i+1);
     return `
-      <div class="gross-detail-backdrop" data-close-gross-detail>
-        <section class="gross-detail-card" role="dialog" aria-modal="true" aria-label="${n} Round ${r} gross scorecard" onclick="event.stopPropagation()">
+      <div class="gross-detail-backdrop" data-gross-backdrop>
+        <section class="gross-detail-card" role="dialog" aria-modal="true" aria-label="${n} Round ${r} gross scorecard">
           <div class="gross-detail-head">
             <div>
               <div class="eyebrow">ROUND ${r} · GROSS SCORECARD</div>
@@ -85,20 +85,39 @@
     }
   }
 
+  function closeDetail(){
+    const mount=document.querySelector('#grossDetailMount');
+    if(mount)mount.innerHTML='';
+  }
+
+  function openDetail(n,r){
+    const mount=document.querySelector('#grossDetailMount');
+    if(!mount)return;
+    mount.innerHTML=detailCard(n,r);
+
+    mount.querySelector('[data-close-gross-detail]')?.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      closeDetail();
+    });
+
+    mount.querySelector('[data-gross-backdrop]')?.addEventListener('click',e=>{
+      if(e.target===e.currentTarget)closeDetail();
+    });
+
+    const esc=e=>{
+      if(e.key==='Escape'){
+        closeDetail();
+        document.removeEventListener('keydown',esc);
+      }
+    };
+    document.addEventListener('keydown',esc);
+  }
+
   function bindGross(){
     document.querySelectorAll('[data-gross-player][data-gross-round]').forEach(b=>{
-      b.onclick=()=>{
-        const mount=document.querySelector('#grossDetailMount');
-        if(!mount)return;
-        mount.innerHTML=detailCard(b.dataset.grossPlayer,+b.dataset.grossRound);
-      };
+      b.onclick=()=>openDetail(b.dataset.grossPlayer,+b.dataset.grossRound);
     });
-    document.querySelector('#app')?.addEventListener('click',e=>{
-      if(e.target.closest?.('[data-close-gross-detail]')){
-        const mount=document.querySelector('#grossDetailMount');
-        if(mount)mount.innerHTML='';
-      }
-    },{once:false});
   }
 
   const priorRender=render;
@@ -129,7 +148,7 @@
     .gross-detail-card{width:min(980px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 20px 70px rgba(0,0,0,.28)}
     .gross-detail-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
     .gross-detail-player{display:flex;align-items:center;gap:12px;margin-top:7px}.gross-detail-player .player-avatar{width:54px;height:54px;min-width:54px}.gross-detail-player h3{margin:0}.gross-detail-total{font-weight:900;color:var(--navy);margin-top:2px}
-    .gross-close{border:0;background:#eef2f6;color:var(--navy);width:38px;height:38px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer}
+    .gross-close{border:0;background:#eef2f6;color:var(--navy);width:44px;height:44px;min-width:44px;border-radius:50%;font-size:28px;line-height:1;cursor:pointer;touch-action:manipulation;position:relative;z-index:2}
     .gross-detail-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:16px;border:1px solid var(--line);border-radius:12px}
     .gross-detail-table{border-collapse:collapse;min-width:980px;width:100%;font-size:12px}.gross-detail-table th,.gross-detail-table td{padding:9px 7px;text-align:center;border-right:1px solid var(--line);white-space:nowrap}.gross-detail-table thead th{background:#f4f7fa}.gross-detail-table tbody th{text-align:left;background:#fff}.gross-detail-sub{font-weight:900;background:#f8fafc}.gross-detail-grand{font-weight:900;background:rgba(23,54,93,.10);font-size:14px}
     .gross-nine-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.gross-nine-summary span{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;font-size:12px}.gross-nine-summary b{display:block;font-size:19px;color:var(--navy);margin-top:2px}
