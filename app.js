@@ -661,11 +661,6 @@ function score(){
 
           <h2>Enter Scores</h2>
 
-          <p class="muted">
-            Enter gross scores once.
-            They automatically feed the individual Stableford tournament,
-            Cottage Cup, Chase, and the selected side game.
-          </p>
         </div>
 
         <div class="live-badge">
