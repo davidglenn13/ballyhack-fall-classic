@@ -174,6 +174,43 @@ function completedRounds(){
   return completed
 }
 
+function easternDateKey(){
+  const parts=Object.fromEntries(
+    new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/New_York',
+      year:'numeric',
+      month:'2-digit',
+      day:'2-digit'
+    }).formatToParts(new Date()).map(x=>[x.type,x.value])
+  );
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function roundFullyEntered(r){
+  return PLAYERS.every(p=>
+    PAR.every((_,i)=>+(state.scores?.[r]?.[p.name]?.[i+1]||0)>0)
+  );
+}
+
+function defaultRoundForToday(){
+  const day=easternDateKey();
+
+  if(day<='2026-09-30')return 1;
+  if(day==='2026-10-01')return roundFullyEntered(2)?3:2;
+  return 4;
+}
+
+function setDailyScoreRound(){
+  const day=easternDateKey();
+
+  if(sessionStorage.scoreRoundDate===day)return;
+
+  sessionStorage.scoreRoundDate=day;
+  sessionStorage.r=defaultRoundForToday();
+  sessionStorage.hole=1;
+}
+
 function chaseTotal(x,n){
   if(n<=0)return 0;
 
@@ -1363,6 +1400,7 @@ function bind(){
     .forEach(x=>x.addEventListener('change',e=>{
       let r=+(sessionStorage.r||1);
       let n=e.target.dataset.scorePlayer;
+      const wasComplete=roundFullyEntered(r);
 
       state.scores[r]??={};
       state.scores[r][n]??={};
@@ -1379,6 +1417,16 @@ function bind(){
         hole:+e.target.dataset.hole,
         gross:+e.target.value
       });
+
+      if(
+        r===2&&
+        easternDateKey()==='2026-10-01'&&
+        !wasComplete&&
+        roundFullyEntered(2)
+      ){
+        sessionStorage.r=3;
+        sessionStorage.hole=1;
+      }
 
       render();
     }));
@@ -1794,6 +1842,7 @@ document.head.appendChild(sideStyle);
 initNav();
 
 loadShared().finally(()=>{
+  setDailyScoreRound();
   render();
   identityGate();
   markAccess();
