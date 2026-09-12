@@ -64,7 +64,6 @@
       <section class="card gross-page-card">
         <div class="eyebrow">OFFICIAL GROSS SCORES</div>
         <h2>Gross Scores</h2>
-        <p class="muted">All 8 golfers · gross total by round.</p>
         ${summaryTable()}
         <div id="grossDetailMount"></div>
       </section>
