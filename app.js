@@ -814,43 +814,6 @@ function score(){
 
     </section>
 
-    <section class="card quick-standings">
-
-      <h2>Quick Links</h2>
-
-      <div class="quick-grid">
-
-        <button
-          class="quick-link"
-          data-goto="Live Standings"
-        >
-          Live Standings
-        </button>
-
-        <button
-          class="quick-link"
-          data-goto="Chase"
-        >
-          Chase for the Cup
-        </button>
-
-        <button
-          class="quick-link"
-          data-goto="Cottage Cup"
-        >
-          Cottage Cup
-        </button>
-
-        <button
-          class="quick-link"
-          data-view-side-results="${r}"
-        >
-          Side Game Results
-        </button>
-
-      </div>
-
-    </section>
   `);
 }
 function board(){
