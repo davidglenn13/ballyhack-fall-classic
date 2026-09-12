@@ -44,7 +44,7 @@
       picker.value='40 Ball';
       const note=document.createElement('div');
       note.className='forty-ball-beta-note callout compact';
-      note.innerHTML=`<b>40 Ball is active for the entire round.</b> Both groups must play 40 Ball. Select exactly 40 net hole scores per group. <b>Counted: ${summary.count}/40 · ${fmtRel(summary.rel)}</b>`;
+      note.innerHTML=`<b>40 Ball Tracker:</b> ${summary.count}/40 · ${fmtRel(summary.rel)}`;
       picker.closest('.side-game-picker')?.insertAdjacentElement('afterend',note);
     }
 
@@ -103,7 +103,7 @@
     const note=document.querySelector('.forty-ball-beta-note');
     if(note){
       const s=groupSummary(r,g);
-      note.innerHTML=`<b>40 Ball is active for the entire round.</b> Both groups must play 40 Ball. Select exactly 40 net hole scores per group. <b>Counted: ${s.count}/40 · ${fmtRel(s.rel)}</b>`;
+      note.innerHTML=`<b>40 Ball Tracker:</b> ${s.count}/40 · ${fmtRel(s.rel)}`;
     }
 
     await persist(r,g,n,h,next);

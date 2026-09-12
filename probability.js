@@ -113,21 +113,20 @@
     const style=document.createElement('style');
     style.id='probability-styles';
     style.textContent=`
-      .prob-panel{margin-top:16px;padding:14px;border:1px solid rgba(23,54,93,.18);border-radius:14px;background:rgba(23,54,93,.045)}
-      .prob-panel h3{margin:0 0 4px;font-size:1rem}.prob-panel .prob-note{margin:0 0 12px;font-size:.82rem;opacity:.72;line-height:1.35}
-      .prob-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-      .prob-item{background:#fff;border-radius:11px;padding:10px 11px;border:1px solid rgba(23,54,93,.10)}
-      .prob-name{font-size:.82rem;font-weight:700;line-height:1.2}.prob-value{font-size:1.32rem;font-weight:800;margin-top:2px}.prob-proj{font-size:.72rem;opacity:.68;margin-top:1px}
-      .prob-bar{height:6px;border-radius:99px;background:rgba(23,54,93,.10);overflow:hidden;margin-top:7px}.prob-fill{height:100%;background:#17365D;border-radius:99px}
+      .prob-panel{margin-top:16px}.prob-panel h3{margin:0 0 4px;font-size:1rem}.prob-panel .prob-note{margin:0 0 12px;font-size:.82rem;opacity:.72;line-height:1.35}
+      .prob-list{display:grid;gap:10px}.prob-player{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid rgba(23,54,93,.13);border-radius:14px;padding:12px}
+      .prob-player .avatar{width:54px;height:54px}.prob-info{min-width:0}.prob-name{font-size:1rem;font-weight:900;line-height:1.15}.prob-rounds{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.prob-round{font-size:.72rem;font-weight:800;padding:4px 7px;border-radius:999px;background:rgba(23,54,93,.07)}
+      .prob-right{text-align:right;min-width:82px}.prob-value{font-size:1.55rem;font-weight:900;line-height:1}.prob-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;opacity:.6;margin-top:4px}.prob-proj{font-size:.7rem;opacity:.65;margin-top:5px}
+      .prob-bar{grid-column:2/4;height:7px;border-radius:99px;background:rgba(23,54,93,.10);overflow:hidden}.prob-fill{height:100%;background:#17365D;border-radius:99px}
       .cottage-prob{margin-top:14px;padding-top:12px;border-top:1px solid rgba(23,54,93,.12)}.cottage-prob strong{display:block;font-size:1.55rem}.cottage-prob span{font-size:.78rem;opacity:.7}
-      @media(min-width:720px){.prob-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+      @media(max-width:560px){.prob-player{grid-template-columns:auto 1fr auto;gap:9px;padding:10px}.prob-player .avatar{width:46px;height:46px}.prob-value{font-size:1.35rem}.prob-round{font-size:.68rem;padding:3px 6px}}
     `;
     document.head.appendChild(style);
   }
 
   function individualPanel(model){
     const ordered=[...PLAYERS].sort((a,b)=>model.players[b.name].win-model.players[a.name].win);
-    return `<div class="prob-panel" data-win-prob="individual"><h3>Win Probability</h3><p class="prob-note">15,000 simulations. Scores already entered are fixed; remaining golf is simulated. Ties split win probability.</p><div class="prob-grid">${ordered.map(p=>{const x=model.players[p.name];return `<div class="prob-item"><div class="prob-name">${p.name}</div><div class="prob-value">${pct(x.win)}</div><div class="prob-proj">Projected best-3: ${x.projected.toFixed(1)}</div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`;}).join('')}</div></div>`;
+    return `<div class="prob-panel" data-win-prob="individual"><p class="prob-note">Probability updates automatically as scores are entered. Completed scores are fixed and the remaining golf is simulated 15,000 times.</p><div class="prob-list">${ordered.map((p,i)=>{const x=model.players[p.name];const rounds=[1,2,3,4].map(r=>roundPoints(r,p.name));return `<div class="prob-player"><div>${avatar(p.name)}</div><div class="prob-info"><div class="prob-name">${i+1}. ${p.name}</div><div class="prob-rounds">${rounds.map((v,ri)=>`<span class="prob-round">R${ri+1} ${v||'—'}</span>`).join('')}</div><div class="prob-proj">Projected best 3: ${x.projected.toFixed(1)} pts</div></div><div class="prob-right"><div class="prob-value">${pct(x.win)}</div><div class="prob-label">Chance to win</div></div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`;}).join('')}</div></div>`;
   }
 
   function inject(){
