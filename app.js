@@ -877,10 +877,11 @@ function board(){
 
         <td><b>${m.label}</b></td>
 
-        ${x.rounds.map(v=>`<td>${v||'—'}</td>`).join('')}
+        <td><b>${x.best3}</b></td>
+
+        ${x.rounds.slice(0,3).map(v=>`<td>${v||'—'}</td>`).join('')}
 
         <td>${x.drop??'—'}</td>
-        <td><b>${x.best3}</b></td>
       </tr>
     `;
   }).join('');
@@ -901,12 +902,11 @@ function board(){
               <th>Pos</th>
               <th>Golfer</th>
               <th>Movement</th>
+              <th>Best 3</th>
               <th>R1</th>
               <th>R2</th>
               <th>R3</th>
-              <th>R4</th>
               <th>Dropped</th>
-              <th>Best 3</th>
             </tr>
           </thead>
 
