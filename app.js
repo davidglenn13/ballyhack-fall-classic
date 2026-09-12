@@ -887,7 +887,14 @@ function cottage(){
   return layout(`
     <section class="card half">
       <h2>Cottage 1</h2>
-      <p>Glenn · Condeni · Wain · Phelan</p>
+      <div class="cottage-player-list">
+        ${PLAYERS.filter(p=>p.cottage===1).map(p=>`
+          <div class="cottage-player">
+            ${avatar(p.name)}
+            <span>${p.name.split(' ').pop()}</span>
+          </div>
+        `).join('')}
+      </div>
 
       <div class="kpi">${t1}</div>
 
@@ -905,7 +912,14 @@ function cottage(){
 
     <section class="card half">
       <h2>Cottage 2</h2>
-      <p>Bohannon · Karl · McCombs · Long</p>
+      <div class="cottage-player-list">
+        ${PLAYERS.filter(p=>p.cottage===2).map(p=>`
+          <div class="cottage-player">
+            ${avatar(p.name)}
+            <span>${p.name.split(' ').pop()}</span>
+          </div>
+        `).join('')}
+      </div>
 
       <div class="kpi">${t2}</div>
 
