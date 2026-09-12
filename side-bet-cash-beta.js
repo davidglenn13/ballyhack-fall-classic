@@ -1,6 +1,7 @@
 /* 40 Ball wager + combined Nassau/40 Ball cash ledger for beta testing. */
 (() => {
   state.fortyBallBets ??= {};
+  const TAB='The Ledger';
 
   const money=v=>{const n=Number(v||0);return `${n<0?'−':''}$${Math.abs(n).toFixed(Number.isInteger(Math.abs(n))?0:2)}`};
   const roundNo=()=>+(sessionStorage.r||1);
@@ -135,10 +136,21 @@
     return `<section class="card sbc-ledger"><div class="eyebrow">ALL SIDE BETS</div><h2>${title}</h2><p>Nassau base matches, Nassau presses, and 40 Ball wagers are netted across all completed results. This is the running trip-wide cash ledger.</p><div class="sbc-net">${PLAYERS.map(p=>{const v=net[p.name]||0;return `<div><span>${p.name}</span><strong>${v>0?'+':''}${money(v)}</strong></div>`}).join('')}</div><h3>Who Pays Who</h3>${pay.length?pay.map(x=>`<div class="sbc-pay"><b>${x.from}</b><span>pays</span><b>${x.to}</b><strong>${money(x.amount)}</strong></div>`).join(''):`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Enter side-game wagers and completed results will populate here automatically.'}</p>`}</section>`;
   }
 
-  function enhanceSideResultsLedger(){
-    const app=document.querySelector('#app');
-    if(!app||app.querySelector('.sbc-ledger')||!document.querySelector('#sideRoundSel'))return;
-    app.insertAdjacentHTML('beforeend',ledgerHtml());
+  function ledgerPage(){
+    return layout(ledgerHtml());
+  }
+
+  function ensureLedgerNav(){
+    const nav=document.querySelector('#nav');
+    if(!nav)return;
+    let b=nav.querySelector(`button[data-tab="${TAB}"]`);
+    if(!b){
+      b=document.createElement('button');
+      b.dataset.tab=TAB;
+      b.textContent=TAB;
+    }
+    const gross=nav.querySelector('button[data-tab="Gross Scores"]');
+    if(gross)nav.insertBefore(b,gross);else nav.appendChild(b);
   }
 
   function replaceTripSettlement(){
@@ -150,7 +162,7 @@
     if(trip)trip.insertAdjacentHTML('afterend',ledgerHtml('Side Bet Settlement').replace('class="card sbc-ledger"','class="card sbc-ledger sbc-settlement"'));
   }
 
-  function enhance(){add40WagerToScore();enhance40Results();enhanceSideResultsLedger();replaceTripSettlement();}
+  function enhance(){ensureLedgerNav();add40WagerToScore();enhance40Results();replaceTripSettlement();}
 
   if(!document.querySelector('#sbc-style')){
     const s=document.createElement('style');s.id='sbc-style';s.textContent=`
@@ -165,6 +177,17 @@
   document.addEventListener('input',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;x.value=x.value.replace(/\D/g,'').slice(0,3)});
   document.addEventListener('change',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;const r=+x.dataset.r,v=Math.min(999,Math.max(0,parseInt(x.value,10)||0));x.value=v||'';persistWager(r,v).then(()=>render())});
 
-  const prior=render;render=function(){prior();setTimeout(enhance,0)};
+  const prior=render;render=function(){
+    ensureLedgerNav();
+    if(tab===TAB){
+      document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===TAB));
+      document.querySelector('#app').innerHTML=ledgerPage();
+      ensureLedgerNav();
+      return;
+    }
+    prior();
+    setTimeout(enhance,0);
+  };
+  ensureLedgerNav();
   setTimeout(enhance,0);
 })();
