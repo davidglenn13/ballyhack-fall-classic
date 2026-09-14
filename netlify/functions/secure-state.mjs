@@ -143,6 +143,14 @@ export default async (req)=>{
       return json({ok:true});
     }
 
+    if(op==='resetPin'){
+      if(actor.role!=='admin')return json({error:'Commissioner access required'},403);
+      const target=String(body.player||'');
+      if(!PLAYERS.has(target)||target==='David Glenn')return json({error:'Select another golfer'},400);
+      await db.sql`DELETE FROM tournament_credentials WHERE player=${target}`;
+      return json({ok:true});
+    }
+
     if(op==='backup'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);
       const id=await createBackup(db,req,'Manual commissioner backup',actor.player,true);

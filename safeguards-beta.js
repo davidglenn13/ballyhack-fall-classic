@@ -176,6 +176,9 @@ admin=function(){
     '<button class="secondary" id="exportCsv">Download Scores CSV</button>'+
     '<button class="secondary" id="exportJson">Download Full Backup</button>'+
     '<button class="secondary" id="changePlayer">Change Player / PIN</button></div>'+
+    '<div class="pin-reset"><label><b>Commissioner PIN recovery</b><select id="resetPinPlayer"><option value="">Select golfer</option>'+
+    PLAYERS.filter(p=>p.name!=='David Glenn').map(p=>'<option>'+p.name+'</option>').join('')+
+    '</select></label><button class="secondary" id="resetPlayerPin">Reset selected PIN</button></div>'+
     '<p class="notice">Automatic checkpoints are saved during scoring and whenever a foursome is locked. Latest backup: '+
     (state.latestBackup?new Date(state.latestBackup.created_at).toLocaleString():'not created yet')+'.</p></section>'+
     '<section class="card"><h2>Score Change History</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Changed by</th><th>Score</th><th>Change</th><th>Action</th></tr></thead><tbody>'+
@@ -218,6 +221,12 @@ bind=function(){
   });
   document.querySelector('#exportCsv')?.addEventListener('click',downloadCsv);
   document.querySelector('#exportJson')?.addEventListener('click',downloadJson);
+  document.querySelector('#resetPlayerPin')?.addEventListener('click',async()=>{
+    const player=document.querySelector('#resetPinPlayer')?.value;
+    if(!player||!confirm('Reset '+player+"'s PIN? They will create a new PIN on their next visit."))return;
+    const result=await apiPost({op:'resetPin',player});
+    if(result)alert(player+' can now create a new PIN.');
+  });
   document.querySelector('#changePlayer')?.addEventListener('click',()=>{
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem('ballyhack-current-player');
