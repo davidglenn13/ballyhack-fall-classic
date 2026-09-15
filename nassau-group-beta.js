@@ -38,6 +38,10 @@
   function hasNassau(r,g){ return !!formatFor(r,g); }
   function activeNassauGroups(r){ return [1,2].filter(g=>hasNassau(r,g)); }
   function firstNames(r,g){ return roundGroupNames(r,g).map(n=>n.split(' ')[0]).join(' · '); }
+  function money(v){
+    const n=Math.max(0,Number(v||0));
+    return `$${n.toFixed(Number.isInteger(n)?0:2)}`;
+  }
   function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   window.nassauFormatFor=formatFor;
@@ -141,6 +145,7 @@
   }
 
   function fortyArchive(r){
+    const value=Math.max(0,Number(state.fortyBallBets?.[r]??state.fortyBallBets?.[String(r)]??0));
     const summary=g=>{
       const map=state.fortyBallSelections?.[r]?.[g]||state.fortyBallSelections?.[String(r)]?.[String(g)]||{};
       let count=0,rel=0;
@@ -152,7 +157,7 @@
       const fmt=rel===0?'E':rel>0?`+${rel}`:`${rel}`;
       return `${g===1?'First':'Second'} Group: ${fmt} · ${count}/40 counted`;
     };
-    return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · 40 Ball</b><span>${summary(1)}</span><span>${summary(2)}</span></div>`;
+    return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · 40 Ball</b><span><strong>Wager:</strong> ${value?`${money(value)} per player`:'Not entered'}</span><span>${summary(1)}</span><span>${summary(2)}</span></div>`;
   }
 
   function nassauArchive(r){
@@ -160,8 +165,12 @@
     if(!groups.length)return '';
     return groups.map(g=>{
       const fmt=formatFor(r,g)||N55;
+      const cfg=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0,presses:[]};
+      const value=Math.max(0,Number(cfg.value||0));
+      const presses=Array.isArray(cfg.presses)?cfg.presses:[];
+      const pressAmounts=presses.length?presses.map((p,i)=>`Press ${i+1}: ${money(p.amount)}`).join(' · '):'No presses';
       const segs=segmentsFor(r,g).map(seg=>`${seg.label}: ${nassauSegment(r,g,seg).status}`).join(' · ');
-      return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · ${g===1?'First':'Second'} Group · ${esc(fmt)}</b><span>${esc(firstNames(r,g))}</span><span>${esc(segs)}</span></div>`;
+      return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · ${g===1?'First':'Second'} Group · ${esc(fmt)}</b><span><strong>Wager:</strong> ${value?`${money(value)} per match`:'Not entered'} · ${esc(pressAmounts)}</span><span>${esc(firstNames(r,g))}</span><span>${esc(segs)}</span></div>`;
     }).join('');
   }
 
