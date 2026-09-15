@@ -1,4 +1,4 @@
-const C='ballyhack-scoring-v6-beta';
+const C='ballyhack-scoring-v7-cloudflare-beta';
 const STATIC=['styles.css','manifest.webmanifest','assets/goat-event-mark.png','assets/course.png','assets/ballyhack-logo.png'];
 self.addEventListener('install',e=>{
   self.skipWaiting();

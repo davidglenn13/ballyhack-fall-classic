@@ -2,7 +2,7 @@
 
 This repository uses two deployment stages:
 
-- `beta` — all development and testing changes go here first. This branch must not be used as the Netlify production branch.
+- `beta` — all development and testing changes go here first. This branch deploys only to the isolated Cloudflare beta project and beta D1 database.
 - `main` — production only. Changes move here only after David explicitly approves promotion to the live site.
 
 ## Required workflow
@@ -13,6 +13,6 @@ This repository uses two deployment stages:
 4. When David explicitly says to publish/promote to production, merge the approved beta changes into `main` once.
 5. After promotion, continue new development on `beta`.
 
-This prevents individual test edits from creating Netlify production deploys and consuming production-deploy credits.
+This prevents individual test edits from changing production and keeps beta data isolated from live tournament scores.
 
 Deploy Preview entry path: `/`

@@ -10,7 +10,7 @@ const ROUNDS=[
 {name:'Round 4 · Fri',time:'9:00 / 9:10 AM',first:['Nick Condeni','Joe Phelan','Scott Karl','Will Long'],second:['David Glenn','Jason Wain','Tyler Bohannon','Bill McCombs'],caddie:'First group'}
 ];
 const key='ballyhack-fall-classic-2026-v2';
-const API='/.netlify/functions/state';
+const API='/api/secure-state';
 
 let state=JSON.parse(localStorage.getItem(key)||'null')||{
   scores:{},
