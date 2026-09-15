@@ -170,14 +170,7 @@ async function handle(context){
       return json(out);
     }
     if(request.method!=='POST')return json({error:'Method not allowed'},405);
-    const body=await request.json();
-    if(body?.op==='diagnoseAuth'){
-      let columns=[],databaseError='',crypto=false,cryptoError='';
-      try{columns=(await db.prepare('PRAGMA table_info(tournament_credentials)').all()).results.map(row=>row.name)}catch(error){databaseError=String(error?.message||error)}
-      try{crypto=(await pinHash('0000','diagnostic')).length===64}catch(error){cryptoError=String(error?.message||error)}
-      return json({ok:!databaseError&&!cryptoError,columns,databaseError,crypto,cryptoError});
-    }
-    if(body?.op==='auth')return authAction(db,body);
+    const body=await request.json();if(body?.op==='auth')return authAction(db,body);
     const actor=await authenticate(db,request,body);if(!actor)return json({error:'Sign in with your player PIN'},401);
     const op=String(body?.op||'');
     if(op==='lockGroup'){
