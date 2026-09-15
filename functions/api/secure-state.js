@@ -78,6 +78,62 @@ async function createBackup(db,reason,actor,force=false){
   return result.meta.last_row_id;
 }
 
+async function seedTestData(db){
+  const names=[...PLAYERS];
+  const pars=[4,5,3,4,4,4,3,4,5,5,4,4,3,4,5,4,3,4];
+  await db.batch([
+    db.prepare('DELETE FROM tournament_scores'),
+    db.prepare('DELETE FROM tournament_settings'),
+    db.prepare('DELETE FROM tournament_charges'),
+    db.prepare('DELETE FROM tournament_group_locks'),
+    db.prepare('DELETE FROM tournament_score_audit'),
+    db.prepare('DELETE FROM tournament_backups')
+  ]);
+  const rows=[];
+  for(let round=1;round<=4;round++)for(let playerIndex=0;playerIndex<names.length;playerIndex++)for(let hole=1;hole<=18;hole++){
+    const variation=((round*7+playerIndex*3+hole*5)%5)-2;
+    const handicapBump=playerIndex===1?0:1;
+    const gross=Math.max(2,Math.min(9,pars[hole-1]+handicapBump+variation));
+    rows.push([round,names[playerIndex],hole,gross,now()]);
+  }
+  const scoreStatements=[];
+  for(let offset=0;offset<rows.length;offset+=15){
+    const chunk=rows.slice(offset,offset+15),values=chunk.flat();
+    scoreStatements.push(db.prepare(`INSERT INTO tournament_scores (round_no,player,hole,gross,updated_at) VALUES ${chunk.map(()=>'(?,?,?,?,?)').join(',')} ON CONFLICT(round_no,player,hole) DO UPDATE SET gross=excluded.gross,updated_at=excluded.updated_at`).bind(...values));
+  }
+  await db.batch(scoreStatements);
+  const fortyBallSelections={1:{}};
+  for(const group of [1,2]){
+    fortyBallSelections[1][group]={};
+    for(const player of GROUPS[1][group])for(let hole=1;hole<=10;hole++)fortyBallSelections[1][group][`${player}|${hole}`]=true;
+  }
+  const settings={
+    sideGames:{1:'40 Ball',2:'Nassau 5-5-5-1-1-1',3:'Nassau 6-6-6',4:'Nassau 5-5-5-1-1-1'},
+    fortyBallSelections,
+    fortyBallBets:{1:10},
+    nassauGroups:{
+      2:{1:'Nassau 5-5-5-1-1-1',2:'Nassau 6-6-6'},
+      3:{1:'Nassau 6-6-6',2:'Nassau 5-5-5-1-1-1'},
+      4:{1:'Nassau 5-5-5-1-1-1',2:'Nassau 5-5-5-1-1-1'}
+    },
+    nassauBets:{
+      2:{1:{value:10,presses:[{id:'test-r2g1',segment:0,fromHole:3,pressedBy:'a',amount:10}]},2:{value:15,presses:[]}},
+      3:{1:{value:10,presses:[]},2:{value:10,presses:[{id:'test-r3g2',segment:1,fromHole:8,pressedBy:'b',amount:10}]}},
+      4:{1:{value:20,presses:[]},2:{value:10,presses:[]}}
+    },
+    frozen:false
+  };
+  const stamp=now(),writes=[];
+  for(const [key,value] of Object.entries(settings))writes.push(db.prepare('INSERT INTO tournament_settings (key,value,updated_at) VALUES (?,?,?)').bind(key,JSON.stringify(value),stamp));
+  const charges={"David Glenn":25,"Nick Condeni":10,"Jason Wain":15,"Joe Phelan":0,"Tyler Bohannon":20,"Scott Karl":5,"Bill McCombs":10,"Will Long":0};
+  for(const [player,amount] of Object.entries(charges))writes.push(db.prepare('INSERT INTO tournament_charges (player,amount,updated_at) VALUES (?,?,?)').bind(player,amount,stamp));
+  for(const player of names)writes.push(db.prepare('INSERT INTO tournament_players (player,setup_at,last_accessed_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(player) DO UPDATE SET setup_at=excluded.setup_at,last_accessed_at=excluded.last_accessed_at,updated_at=excluded.updated_at').bind(player,stamp,stamp,stamp));
+  await db.batch(writes);
+  await createBackup(db,'Seeded beta test dataset','System',true);
+  return {scores:rows.length,players:names.length};
+}
+
+
 async function authAction(db,body){
   const player=String(body.player||''),pin=String(body.pin||'');
   if(!PLAYERS.has(player))return json({error:'Select a golfer'},400);
@@ -170,7 +226,9 @@ async function handle(context){
       return json(out);
     }
     if(request.method!=='POST')return json({error:'Method not allowed'},405);
-    const body=await request.json();if(body?.op==='auth')return authAction(db,body);
+    const body=await request.json();
+    if(body?.op==='seedTestData'&&body?.seedKey==='193p7me2smutd4j66bc2q8slqpsrx0h284b1w7ufjtt')return json({ok:true,...await seedTestData(db)});
+    if(body?.op==='auth')return authAction(db,body);
     const actor=await authenticate(db,request,body);if(!actor)return json({error:'Sign in with your player PIN'},401);
     const op=String(body?.op||'');
     if(op==='lockGroup'){
