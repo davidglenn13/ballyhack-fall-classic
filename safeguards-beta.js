@@ -5,6 +5,7 @@ const QUEUE_KEY='ballyhack-sync-queue-v1';
 let syncMessage='Checking connection…';
 let syncTone='pending';
 let lastSync='';
+let lastRequestError='';
 const originalScore=score;
 const originalAdmin=admin;
 const originalBind=bind;
@@ -42,6 +43,7 @@ function reapplyQueued(){
   }
 }
 async function secureRequest(payload,{allowQueue=true}={}){
+  lastRequestError='';
   const enriched={
     ...payload,
     actor:payload.actor||currentUser(),
@@ -58,6 +60,7 @@ async function secureRequest(payload,{allowQueue=true}={}){
     });
     const data=await response.json().catch(()=>({}));
     if(!response.ok){
+      lastRequestError=data.error||('API '+response.status);
       if(response.status===401){
         localStorage.removeItem(TOKEN_KEY);
         setSync('PIN sign-in required','bad');
@@ -70,6 +73,7 @@ async function secureRequest(payload,{allowQueue=true}={}){
     setSync('All changes synced · '+lastSync,'good');
     return data;
   }catch(error){
+    lastRequestError=error?.message||'Unable to reach the scoring service';
     if(allowQueue&&!error.httpStatus){
       queuePayload(enriched);
       return {queued:true};
@@ -291,9 +295,12 @@ identityGate=function(){
     const pin=overlay.querySelector('#identityPin').value;
     const error=overlay.querySelector('#loginError');
     if(!player||!/^\d{4}$/.test(pin)){error.textContent='Select your name and enter exactly four digits.';return}
-    error.textContent='Signing in…';
+    const button=overlay.querySelector('#identitySave');
+    button.disabled=true;
+    error.textContent='Creating or checking PIN… this can take about 10 seconds.';
     const result=await secureRequest({op:'auth',player,pin,actor:player,authToken:''},{allowQueue:false});
-    if(!result){error.textContent='That PIN was not accepted. Try again.';return}
+    button.disabled=false;
+    if(!result){error.textContent=lastRequestError||'That PIN was not accepted. Try again.';return}
     localStorage.setItem('ballyhack-current-player',player);
     localStorage.setItem(TOKEN_KEY,result.token);
     overlay.remove();
