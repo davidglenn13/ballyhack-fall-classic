@@ -69,6 +69,7 @@
     lastSignature=signature;
     const rand=rng(hashString('ballyhack-2026|'+signature));
     const playerWins=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
+    const playerPlaces=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
     const cottageWins={1:0,2:0};
     const projectedPlayer=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
     const projectedCottage={1:0,2:0};
@@ -81,6 +82,8 @@
       const best=Math.max(...finalTotals.map(x=>x.total));
       const winners=finalTotals.filter(x=>x.total===best);
       winners.forEach(x=>playerWins[x.name]+=1/winners.length);
+      const podiumCutoff=[...finalTotals].sort((a,b)=>b.total-a.total)[2].total;
+      finalTotals.filter(x=>x.total>=podiumCutoff).forEach(x=>playerPlaces[x.name]++);
       finalTotals.forEach(x=>projectedPlayer[x.name]+=x.total);
 
       const cottageTotals={1:0,2:0};
@@ -96,7 +99,7 @@
     }
 
     cached={
-      players:Object.fromEntries(PLAYERS.map(p=>[p.name,{win:100*playerWins[p.name]/SIMS,projected:projectedPlayer[p.name]/SIMS}])),
+      players:Object.fromEntries(PLAYERS.map(p=>[p.name,{win:100*playerWins[p.name]/SIMS,place:100*playerPlaces[p.name]/SIMS,projected:projectedPlayer[p.name]/SIMS}])),
       cottages:{1:{win:100*cottageWins[1]/SIMS,projected:projectedCottage[1]/SIMS},2:{win:100*cottageWins[2]/SIMS,projected:projectedCottage[2]/SIMS}}
     };
     return cached;
@@ -116,17 +119,17 @@
       .prob-panel{margin-top:16px}.prob-panel h3{margin:0 0 4px;font-size:1rem}.prob-panel .prob-note{margin:0 0 12px;font-size:.82rem;opacity:.72;line-height:1.35}
       .prob-list{display:grid;gap:10px}.prob-player{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid rgba(23,54,93,.13);border-radius:14px;padding:12px}
       .prob-player .avatar{width:54px;height:54px}.prob-info{min-width:0}.prob-name{font-size:1rem;font-weight:900;line-height:1.15}.prob-rounds{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.prob-round{font-size:.72rem;font-weight:800;padding:4px 7px;border-radius:999px;background:rgba(23,54,93,.07)}
-      .prob-right{text-align:right;min-width:82px}.prob-value{font-size:1.55rem;font-weight:900;line-height:1}.prob-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;opacity:.6;margin-top:4px}.prob-proj{font-size:.7rem;opacity:.65;margin-top:5px}
+      .prob-right{display:flex;gap:12px;text-align:right;min-width:150px}.prob-stat{min-width:64px}.prob-value{font-size:1.55rem;font-weight:900;line-height:1}.prob-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;opacity:.6;margin-top:4px}.prob-proj{font-size:.7rem;opacity:.65;margin-top:5px}
       .prob-bar{grid-column:2/4;height:7px;border-radius:99px;background:rgba(23,54,93,.10);overflow:hidden}.prob-fill{height:100%;background:#17365D;border-radius:99px}
       .cottage-prob{margin-top:14px;padding-top:12px;border-top:1px solid rgba(23,54,93,.12)}.cottage-prob strong{display:block;font-size:1.55rem}.cottage-prob span{font-size:.78rem;opacity:.7}
-      @media(max-width:560px){.prob-player{grid-template-columns:auto 1fr auto;gap:9px;padding:10px}.prob-player .avatar{width:46px;height:46px}.prob-value{font-size:1.35rem}.prob-round{font-size:.68rem;padding:3px 6px}}
+      @media(max-width:560px){.prob-player{grid-template-columns:auto 1fr;gap:9px;padding:10px}.prob-player .avatar{width:46px;height:46px}.prob-right{grid-column:1/3;justify-content:flex-end;min-width:0}.prob-value{font-size:1.35rem}.prob-round{font-size:.68rem;padding:3px 6px}.prob-bar{grid-column:1/3}}
     `;
     document.head.appendChild(style);
   }
 
   function individualPanel(model){
     const ordered=[...PLAYERS].sort((a,b)=>model.players[b.name].win-model.players[a.name].win);
-    return `<div class="prob-panel" data-win-prob="individual"><p class="prob-note">Probability updates automatically as scores are entered. Completed scores are fixed and the remaining golf is simulated 15,000 times.</p><div class="prob-list">${ordered.map((p,i)=>{const x=model.players[p.name];const rounds=[1,2,3,4].map(r=>roundPoints(r,p.name));return `<div class="prob-player"><div>${avatar(p.name)}</div><div class="prob-info"><div class="prob-name">${i+1}. ${p.name}</div><div class="prob-rounds">${rounds.map((v,ri)=>`<span class="prob-round">R${ri+1} ${v||'—'}</span>`).join('')}</div><div class="prob-proj">Projected best 3: ${x.projected.toFixed(1)} pts</div></div><div class="prob-right"><div class="prob-value">${pct(x.win)}</div><div class="prob-label">Chance to win</div></div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`;}).join('')}</div></div>`;
+    return `<div class="prob-panel" data-win-prob="individual"><p class="prob-note">Probability updates automatically as scores are entered. Completed scores are fixed and the remaining golf is simulated 15,000 times. In the money means finishing 1st, 2nd, or 3rd; ties at the cutoff count.</p><div class="prob-list">${ordered.map((p,i)=>{const x=model.players[p.name];const rounds=[1,2,3,4].map(r=>roundPoints(r,p.name));return `<div class="prob-player"><div>${avatar(p.name)}</div><div class="prob-info"><div class="prob-name">${i+1}. ${p.name}</div><div class="prob-rounds">${rounds.map((v,ri)=>`<span class="prob-round">R${ri+1} ${v||'—'}</span>`).join('')}</div><div class="prob-proj">Projected best 3: ${x.projected.toFixed(1)} pts</div></div><div class="prob-right"><div class="prob-stat"><div class="prob-value">${pct(x.win)}</div><div class="prob-label">To win</div></div><div class="prob-stat"><div class="prob-value">${pct(x.place)}</div><div class="prob-label">In money</div></div></div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.place)}%"></div></div></div>`;}).join('')}</div></div>`;
   }
 
   function inject(){
