@@ -288,7 +288,7 @@ identityGate=function(){
     '<h2>Golfer Sign In</h2><p>Select your name and enter your private four-digit PIN. On your first visit, the PIN you choose becomes your PIN.</p>'+
     '<select id="identitySelect"><option value="">Select golfer</option>'+PLAYERS.map(p=>'<option>'+p.name+'</option>').join('')+'</select>'+
     '<input id="identityPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="4-digit PIN">'+
-    '<p class="login-error" id="loginError"></p><button class="primary" id="identitySave">Continue</button></div>';
+    '<p class="login-error" id="loginError"></p><button type="button" class="primary" id="identitySave">Continue</button></div>';
   document.body.appendChild(overlay);
   overlay.querySelector('#identitySave').onclick=async()=>{
     const player=overlay.querySelector('#identitySelect').value;
@@ -297,9 +297,11 @@ identityGate=function(){
     if(!player||!/^\d{4}$/.test(pin)){error.textContent='Select your name and enter exactly four digits.';return}
     const button=overlay.querySelector('#identitySave');
     button.disabled=true;
+    button.textContent='Working…';
     error.textContent='Creating or checking PIN… this can take about 10 seconds.';
     const result=await secureRequest({op:'auth',player,pin,actor:player,authToken:''},{allowQueue:false});
     button.disabled=false;
+    button.textContent='Continue';
     if(!result){error.textContent=lastRequestError||'That PIN was not accepted. Try again.';return}
     localStorage.setItem('ballyhack-current-player',player);
     localStorage.setItem(TOKEN_KEY,result.token);
