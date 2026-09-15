@@ -19,6 +19,10 @@ The databases must never be shared between projects. Production deployment remai
 
 The shared API is `/api/secure-state`, implemented by `functions/api/secure-state.js`.
 
+## Deployment status
+
+- 2026-09-15: Created the Cloudflare Pages beta project from the `beta` branch and bound `DB` to the isolated `ballyhack-beta` D1 database.
+
 ## Release controls
 
 - Develop and test on `beta` only.
