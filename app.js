@@ -1671,6 +1671,59 @@ sideStyle.textContent=`
   color:var(--navy)
 }
 
+.side-game-picker .nlp-wager,
+.side-game-picker .fbw-wager{
+  max-width:none;
+  margin-top:14px;
+  padding:14px;
+  border:2px solid var(--navy);
+  border-radius:10px;
+  background:#fff;
+  color:var(--navy);
+  font-size:15px
+}
+
+.side-game-picker .needs-wager{
+  border-color:#b42318;
+  background:#fff7f5
+}
+
+.side-game-picker .wager-next{
+  display:none;
+  font-size:13px;
+  font-weight:800;
+  color:#9f1b12
+}
+
+.side-game-picker .needs-wager .wager-next{display:block}
+
+.side-game-picker .wager-entry{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:0 12px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  font-size:20px
+}
+
+.side-game-picker .wager-entry:focus-within{
+  outline:2px solid var(--navy);
+  outline-offset:2px
+}
+
+.side-game-picker .wager-entry input{
+  flex:1;
+  min-width:0;
+  width:100%;
+  padding:10px 0;
+  border:0;
+  outline:0;
+  background:transparent;
+  font-size:20px
+}
+
 .side-game-picker button{
   min-height:42px
 }

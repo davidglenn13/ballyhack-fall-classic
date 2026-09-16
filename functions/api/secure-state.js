@@ -144,7 +144,7 @@ async function baseOperation(db,body){
     const current=await setting(db,'fortyBallSelections',{});current[String(round)]??={};current[String(round)][String(group)]??={};const key=`${body.player}|${hole}`;
     if(body.value)current[String(round)][String(group)][key]=true;else delete current[String(round)][String(group)][key];await putSetting(db,'fortyBallSelections',current);
   }else if(op==='fortyBallBet'){
-    const round=Number(body.round),value=Math.max(0,Math.min(999,Number(body.value||0)));if(!(round>=1&&round<=4))return json({error:'Invalid 40 Ball wager'},400);
+    const round=Number(body.round),value=Math.max(0,Math.min(9999,Number(body.value||0)));if(!(round>=1&&round<=4))return json({error:'Invalid 40 Ball wager'},400);
     const current=await setting(db,'fortyBallBets',{});current[String(round)]=value;await putSetting(db,'fortyBallBets',current);
   }else if(op==='frozen')await putSetting(db,'frozen',!!body.value);
   else if(op==='clearScores')await db.prepare('DELETE FROM tournament_scores').run();

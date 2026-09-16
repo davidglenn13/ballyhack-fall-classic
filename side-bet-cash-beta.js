@@ -106,7 +106,7 @@
     if(!picker||!sel||picker.querySelector('.fbw-wager'))return;
     const host=sel.closest('div')||picker,v=wager(r);
     if(g===1){
-      host.insertAdjacentHTML('beforeend',`<label class="fbw-wager">Wager Amount $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-fbw-wager data-r="${r}" value="${v||''}" placeholder="5" aria-label="40 Ball wager amount"></label>`);
+      host.insertAdjacentHTML('beforeend',`<label class="fbw-wager ${v?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-fbw-wager data-r="${r}" value="${v||''}" aria-label="40 Ball wager amount"></span></label>`);
     }else{
       host.insertAdjacentHTML('beforeend',`<div class="fbw-wager fbw-readonly">Wager Amount <b>${v?money(v):'not entered'}</b><small>First Group sets the wager.</small></div>`);
     }
@@ -174,8 +174,8 @@
     `;document.head.appendChild(s);
   }
 
-  document.addEventListener('input',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;x.value=x.value.replace(/\D/g,'').slice(0,3)});
-  document.addEventListener('change',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;const r=+x.dataset.r,v=Math.min(999,Math.max(0,parseInt(x.value,10)||0));x.value=v||'';persistWager(r,v).then(()=>render())});
+  document.addEventListener('input',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;x.value=x.value.replace(/\D/g,'').slice(0,4);x.closest('.fbw-wager')?.classList.toggle('needs-wager',!(+x.value))});
+  document.addEventListener('change',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;const r=+x.dataset.r,v=Math.min(9999,Math.max(0,parseInt(x.value,10)||0));x.value=v||'';persistWager(r,v).then(()=>render())});
 
   const prior=render;render=function(){
     ensureLedgerNav();
