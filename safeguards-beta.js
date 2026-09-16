@@ -36,23 +36,21 @@ function switchPlayer(){
   sessionStorage.removeItem(PLAYER_KEY);
   location.reload();
 }
-function updateSyncIdentity(){
+function updateHeaderIdentity(){
+  const container=document.querySelector('#headerIdentity');
+  if(!container)return;
+  container.replaceChildren();
   const user=currentUser();
   if(!user||!authToken())return;
-  document.querySelectorAll('.sync-panel').forEach(panel=>{
-    const identity=document.createElement('span');
-    identity.className='sync-identity';
-    identity.append('Signed in as ');
-    const name=document.createElement('button');
-    name.type='button';
-    name.className='sync-player-link';
-    name.textContent=user;
-    name.setAttribute('aria-label','Change player, currently signed in as '+user);
-    name.addEventListener('click',switchPlayer);
-    identity.append(name);
-    if(user==='David Glenn')identity.append(' · Commissioner');
-    panel.append(identity);
-  });
+  container.append('Signed in as ');
+  const name=document.createElement('button');
+  name.type='button';
+  name.className='sync-player-link';
+  name.textContent=user;
+  name.setAttribute('aria-label','Change player, currently signed in as '+user);
+  name.addEventListener('click',switchPlayer);
+  container.append(name);
+  if(user==='David Glenn')container.append(' · Commissioner');
 }
 function mutationId(){
   return globalThis.crypto?.randomUUID?.()||
@@ -338,7 +336,7 @@ bind=function(){
 
 render=function(){
   originalRender();
-  updateSyncIdentity();
+  updateHeaderIdentity();
   if(tab==='Score'){
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
     const disabled=locked(round,group)||!canEdit(round,group)||!authToken();
