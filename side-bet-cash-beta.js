@@ -112,6 +112,18 @@
     }
   }
 
+  function moveSelectedPicker(){
+    const r=roundNo(),g=groupNo();
+    if(typeof sideGameWasSelected!=='function'||!sideGameWasSelected(r,g))return;
+    const card=document.querySelector('.scoring-card'),picker=document.querySelector('.side-game-picker');
+    if(!card||!picker)return;
+    picker.classList.add('side-game-picker-detached');
+    picker.querySelector('.wager-next')?.replaceChildren('Wager Set');
+    const note=document.querySelector('.forty-ball-beta-note');
+    if(note)card.insertAdjacentElement('afterend',note);
+    (note||card).insertAdjacentElement('afterend',picker);
+  }
+
   function roundCashBlock(r){
     const x=fortyNet(r),pay=payments(x.net);
     let status='Enter the 40 Ball wager from the First Group score screen.';
@@ -162,11 +174,11 @@
     if(trip)trip.insertAdjacentHTML('afterend',ledgerHtml('Side Bet Settlement').replace('class="card sbc-ledger"','class="card sbc-ledger sbc-settlement"'));
   }
 
-  function enhance(){ensureLedgerNav();add40WagerToScore();enhance40Results();replaceTripSettlement();}
+  function enhance(){ensureLedgerNav();add40WagerToScore();enhance40Results();replaceTripSettlement();moveSelectedPicker();}
 
   if(!document.querySelector('#sbc-style')){
     const s=document.createElement('style');s.id='sbc-style';s.textContent=`
-      .fbw-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:180px}
+      .fbw-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:180px}.side-game-picker-detached{grid-column:span 12;width:100%;max-width:none;margin-top:14px;padding:14px;border:2px solid var(--navy);border-radius:10px;background:#fff;color:var(--navy)}.side-game-picker-detached .wager-next{display:block;font-size:15px;font-weight:900;color:var(--navy)}.side-game-picker-detached .wager-entry{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:20px}.side-game-picker-detached .wager-entry input{flex:1;min-width:0;width:100%;padding:10px 0;border:0;outline:0;background:transparent;font-size:20px}
       .fbw-wager input{width:100%;font-size:16px;font-weight:900}.fbw-readonly b{font-size:14px;color:var(--text)}.fbw-readonly small{font-weight:700}
       .fbw-round-cash{margin-top:18px;padding-top:16px;border-top:2px solid var(--line)}.fbw-round-cash h3{margin:3px 0 8px}.fbw-round-cash h4{margin:14px 0 4px}
       .sbc-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.sbc-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.sbc-payment-panel{margin-top:22px;padding:16px;border:1px solid rgba(23,54,93,.20);border-left:5px solid var(--navy);border-radius:12px;background:rgba(23,54,93,.045);box-shadow:0 5px 16px rgba(23,54,93,.06)}.sbc-payment-panel h3,.sbc-payment-panel h4{margin:0 0 11px;color:var(--navy)}.sbc-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;margin-top:7px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;align-items:center}.sbc-pay span{font-size:12px;color:var(--muted)}
