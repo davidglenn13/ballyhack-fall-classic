@@ -2,6 +2,15 @@
 const SECURE_API='/api/secure-state';
 const TOKEN_KEY='ballyhack-auth-token';
 const QUEUE_KEY='ballyhack-sync-queue-v1';
+
+const entryUrl=new URL(location.href);
+if(entryUrl.searchParams.get('switchPlayer')==='1'){
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('ballyhack-current-player');
+  entryUrl.searchParams.delete('switchPlayer');
+  const remaining=entryUrl.searchParams.toString();
+  history.replaceState(null,'',entryUrl.pathname+(remaining?'?'+remaining:'')+entryUrl.hash);
+}
 let syncMessage='Checking connection…';
 let syncTone='pending';
 let lastSync='';
