@@ -135,6 +135,7 @@ test('Incorrect PINs trigger escalating per-golfer waits and a successful login 
   assert.equal(fifth.status,429);
   assert.equal(fifth.body.retryAfterSeconds,60);
   assert.equal((await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'1234'})).status,429);
+  assert.equal((await x.get('Nick Condeni')).safeguards.authenticated,true);
   assert.equal((await x.send('POST','David Glenn',{op:'auth',player:'David Glenn',pin:'1234'})).status,200);
   x.sqlite.prepare('UPDATE tournament_login_attempts SET locked_until=0 WHERE player=?').run('Nick Condeni');
   const sixth=await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'9999'});
