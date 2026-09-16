@@ -175,7 +175,7 @@
   }
 
   document.addEventListener('input',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;x.value=x.value.replace(/\D/g,'').slice(0,4);x.closest('.fbw-wager')?.classList.toggle('needs-wager',!(+x.value))});
-  document.addEventListener('change',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;const r=+x.dataset.r,v=Math.min(9999,Math.max(0,parseInt(x.value,10)||0));x.value=v||'';persistWager(r,v).then(()=>render())});
+  document.addEventListener('change',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;const r=+x.dataset.r,v=Math.min(9999,Math.max(0,parseInt(x.value,10)||0));x.value=v||'';if(typeof sideGameWasSelected==='function'){[1,2].forEach(group=>v?sessionStorage.setItem('ballyhack-side-selected-'+r+'-'+group,'1'):sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+group));}persistWager(r,v).then(()=>render())});
 
   const prior=render;render=function(){
     ensureLedgerNav();
