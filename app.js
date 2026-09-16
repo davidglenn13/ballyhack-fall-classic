@@ -883,7 +883,6 @@ function board(){
       <div class="callout">
         <b>Stableford points:</b>
         5 = 3 or more under net par · 4 = 2 under · 3 = 1 under · 2 = net par · 1 = 1 over · 0 = 2 or more over.<br>
-        Standings use net Stableford points, and <b>Best 3</b> is the total from each golfer’s three highest completed rounds.
       </div>
 
       <div class="table-wrap">
