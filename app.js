@@ -77,7 +77,7 @@ async function loadShared(){
 }
 
 function currentUser(){
-  return localStorage.getItem('ballyhack-current-player')||''
+  return sessionStorage.getItem('ballyhack-current-player')||''
 }
 
 async function markAccess(){

@@ -1,12 +1,22 @@
 (()=>{
 const SECURE_API='/api/secure-state';
 const TOKEN_KEY='ballyhack-auth-token';
+const PLAYER_KEY='ballyhack-current-player';
 const QUEUE_KEY='ballyhack-sync-queue-v1';
 
+// Carry a previous browser-wide sign-in into this tab once, then stop sharing it.
+const legacyPlayer=localStorage.getItem(PLAYER_KEY);
+const legacyToken=localStorage.getItem(TOKEN_KEY);
+if(legacyPlayer&&legacyToken&&!sessionStorage.getItem(TOKEN_KEY)){
+  sessionStorage.setItem(PLAYER_KEY,legacyPlayer);
+  sessionStorage.setItem(TOKEN_KEY,legacyToken);
+}
+localStorage.removeItem(PLAYER_KEY);
+localStorage.removeItem(TOKEN_KEY);
 const entryUrl=new URL(location.href);
 if(entryUrl.searchParams.get('switchPlayer')==='1'){
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem('ballyhack-current-player');
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(PLAYER_KEY);
   entryUrl.searchParams.delete('switchPlayer');
   const remaining=entryUrl.searchParams.toString();
   history.replaceState(null,'',entryUrl.pathname+(remaining?'?'+remaining:'')+entryUrl.hash);
@@ -20,10 +30,10 @@ const originalAdmin=admin;
 const originalBind=bind;
 const originalRender=render;
 
-function authToken(){return localStorage.getItem(TOKEN_KEY)||''}
+function authToken(){return sessionStorage.getItem(TOKEN_KEY)||''}
 function switchPlayer(){
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem('ballyhack-current-player');
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(PLAYER_KEY);
   location.reload();
 }
 function updateSyncIdentity(){
@@ -94,7 +104,7 @@ async function secureRequest(payload,{allowQueue=true}={}){
     if(!response.ok){
       lastRequestError=data.error||('API '+response.status);
       if(response.status===401){
-        localStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(TOKEN_KEY);
         setSync('PIN sign-in required','bad');
       }else setSync(data.error||'Change was not accepted','bad');
       const err=new Error(data.error||('API '+response.status));
@@ -368,8 +378,8 @@ function downloadCsv(){
 
 identityGate=function(){
   if(currentUser()&&authToken())return;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem('ballyhack-current-player');
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(PLAYER_KEY);
   document.querySelector('.identity-overlay')?.remove();
   const overlay=document.createElement('div');
   overlay.className='identity-overlay';
@@ -392,8 +402,8 @@ identityGate=function(){
     button.disabled=false;
     button.textContent='Continue';
     if(!result){error.textContent=lastRequestError||'That PIN was not accepted. Try again.';return}
-    localStorage.setItem('ballyhack-current-player',player);
-    localStorage.setItem(TOKEN_KEY,result.token);
+    sessionStorage.setItem(PLAYER_KEY,player);
+    sessionStorage.setItem(TOKEN_KEY,result.token);
     overlay.remove();
     await markAccess();
     await loadShared();
