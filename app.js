@@ -880,7 +880,7 @@ function board(){
 
   return layout(`
     <section class="card">
-      <h2>Live Individual Standings</h2>
+      <h2>Individual Live Standings - Stableford</h2>
 
       <div class="callout">
         <b>Movement:</b>
