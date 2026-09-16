@@ -50,13 +50,13 @@
   async function setRoundGame(r,value){
     state.sideGames[r]=value;
     save();
-    await apiPost({op:'sideGame',round:r,value});
+    if(!await apiPost({op:'sideGame',round:r,value}))throw new Error('Side game was not saved');
   }
   async function setNassauGroup(r,g,value){
     const map=nassauMap(r);
     if(value) map[g]=value; else delete map[g];
     save();
-    await apiPost({op:'nassauGroup',round:r,group:g,value:value||false});
+    if(!await apiPost({op:'nassauGroup',round:r,group:g,value:value||false}))throw new Error('Nassau format was not saved');
   }
 
   function displayGameForScore(r,g){
@@ -67,6 +67,7 @@
 
   async function handleScoreGameChange(select){
     const r=roundNo(), g=groupNo(), value=select.value;
+    try{
     if(value===FORTY){
       await setNassauGroup(r,1,false);
       await setNassauGroup(r,2,false);
@@ -86,6 +87,7 @@
       }
     }
     render();
+    }catch(error){await loadShared();render();alert('That side-game change was not saved. Review the current choices and try again.');}
   }
 
   function ensurePickerOptions(sel){

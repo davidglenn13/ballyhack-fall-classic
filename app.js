@@ -1292,13 +1292,6 @@ function admin(){
           :'Freeze Indexes'}
       </button>
 
-      <button
-        class="secondary"
-        id="reset"
-      >
-        Reset Demo Data
-      </button>
-
       <p class="notice">
         Live tournament data is synchronized through
         the shared Netlify database.
@@ -1404,6 +1397,7 @@ function bind(){
 
       state.scores[r]??={};
       state.scores[r][n]??={};
+      const expectedGross=Number(state.scores[r][n][e.target.dataset.hole]||0);
 
       state.scores[r][n][e.target.dataset.hole]=
         e.target.value;
@@ -1415,7 +1409,8 @@ function bind(){
         round:r,
         player:n,
         hole:+e.target.dataset.hole,
-        gross:+e.target.value
+        gross:+e.target.value,
+        expectedGross
       });
 
       if(
@@ -1564,15 +1559,6 @@ function bind(){
       render();
     });
 
-  document.querySelector('#reset')
-    ?.addEventListener('click',()=>{
-      if(confirm('Clear all scores and demo data?')){
-        localStorage.removeItem(key);
-
-        apiPost({op:'reset'})
-          .finally(()=>location.reload());
-      }
-    });
 }
 
 function identityGate(){

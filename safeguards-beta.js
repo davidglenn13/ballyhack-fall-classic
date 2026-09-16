@@ -57,9 +57,10 @@ function mutationId(){
     Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
 }
 function queue(){
-  try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')}catch{return []}
+  try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]').map(({authToken,...item})=>item)}catch{return []}
 }
 function setQueue(items){localStorage.setItem(QUEUE_KEY,JSON.stringify(items))}
+setQueue(queue()); // Remove tokens from older offline queue entries without discarding scores.
 function setSync(message,tone='pending'){
   syncMessage=message; syncTone=tone;
   document.querySelectorAll('[data-sync-status]').forEach(el=>{
@@ -69,29 +70,42 @@ function setSync(message,tone='pending'){
 }
 function queuePayload(payload){
   const items=queue();
-  if(!items.some(x=>x.mutationId===payload.mutationId))items.push(payload);
+  const {authToken,...safe}=payload;
+  if(!items.some(x=>x.mutationId===payload.mutationId))items.push(safe);
   setQueue(items);
   setSync(items.length+' change'+(items.length===1?'':'s')+' saved on this phone — waiting to sync','pending');
 }
 function reapplyQueued(){
   for(const item of queue()){
-    if(item.op==='score'){
+    if(item.op==='score'&&item.actor===currentUser()&&(item.epoch??null)===(state.epoch??null)){
       state.scores[item.round]??={};
       state.scores[item.round][item.player]??={};
       state.scores[item.round][item.player][item.hole]=item.gross?String(item.gross):'';
     }
   }
 }
-async function secureRequest(payload,{allowQueue=true}={}){
+const settingKeyFor=op=>({sideGame:'sideGames',nassauGroup:'nassauGroups',nassauBetConfig:'nassauBets',fortyBallSelection:'fortyBallSelections',fortyBallBet:'fortyBallBets'})[op];
+const pendingSettings=new Map();
+function secureRequest(payload,options={}){
+  const key=settingKeyFor(payload.op);
+  if(!key)return sendSecureRequest(payload,options);
+  const snapshot=structuredClone(payload);
+  const next=(pendingSettings.get(key)||Promise.resolve()).catch(()=>{}).then(()=>sendSecureRequest(snapshot,options));
+  pendingSettings.set(key,next);
+  next.finally(()=>{if(pendingSettings.get(key)===next)pendingSettings.delete(key)});
+  return next;
+}
+async function sendSecureRequest(payload,{allowQueue=true}={}){
   lastRequestError='';
   const enriched={
     ...payload,
     actor:payload.actor||currentUser(),
     authToken:payload.authToken||authToken(),
-    mutationId:payload.mutationId||mutationId()
+    mutationId:payload.mutationId||mutationId(),
+    epoch:payload.epoch??state.epoch??null,
+    ...(settingKeyFor(payload.op)?{expectedRevision:state.revisions?.[settingKeyFor(payload.op)]??null}:{})
   };
-  const neverQueue=new Set(['auth','lockGroup','requestUnlock','unlockGroup','undoScore','backup','reset','clearScores','frozen','charge']);
-  allowQueue=allowQueue&&!neverQueue.has(enriched.op);
+  allowQueue=allowQueue&&enriched.op==='score';
   try{
     const response=await fetch(SECURE_API,{
       method:'POST',
@@ -104,12 +118,15 @@ async function secureRequest(payload,{allowQueue=true}={}){
       if(response.status===401){
         sessionStorage.removeItem(TOKEN_KEY);
         setSync('PIN sign-in required','bad');
+      }else if(response.status===409){
+        setSync('Another phone changed this entry — refresh and review','bad');
       }else setSync(data.error||'Change was not accepted','bad');
       const err=new Error(data.error||('API '+response.status));
       err.httpStatus=response.status;
       throw err;
     }
     lastSync=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    if(data.settingKey){state.revisions??={};state.revisions[data.settingKey]=data.revision}
     setSync('All changes synced · '+lastSync,'good');
     return data;
   }catch(error){
@@ -119,6 +136,7 @@ async function secureRequest(payload,{allowQueue=true}={}){
       return {queued:true};
     }
     if(error.httpStatus)loadShared().then(()=>render());
+    else if(!allowQueue)setSync('Not saved — reconnect and retry','bad');
     return null;
   }
 }
@@ -148,12 +166,16 @@ loadShared=async()=>{
       audit:[...(remote.audit||[])],
       activity:[...(remote.activity||[])],
       testers:[...(remote.testers||[])],
+      backups:[...(remote.backups||[])],
+      revisions:{...(remote.revisions||{})},
+      epoch:remote.epoch??null,
       sideGames:{1:'None',2:'None',3:'None',4:'None',...(remote.sideGames||{})}
     };
     reapplyQueued();
     save();
     lastSync=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    setSync(queue().length?queue().length+' changes waiting to sync':'All changes synced · '+lastSync,queue().length?'pending':'good');
+    const pending=queue(),stale=pending.some(x=>x.actor!==currentUser()||(x.epoch??null)!==(state.epoch??null));
+    setSync(stale?'Pending scores need review — use Retry or Discard':pending.length?pending.length+' changes waiting to sync':'All changes synced · '+lastSync,stale?'bad':pending.length?'pending':'good');
     return true;
   }catch(error){
     setSync(queue().length?queue().length+' changes saved on this phone — offline':'Offline — new scores will be saved on this phone','pending');
@@ -167,6 +189,11 @@ async function flushQueue(){
   if(!items.length)return;
   const remaining=[];
   for(const item of items){
+    if(item.actor!==currentUser()){
+      remaining.push(item);
+      setSync('Pending scores belong to '+item.actor+' — sign in as that golfer to sync','bad');
+      continue;
+    }
     const result=await secureRequest(item,{allowQueue:false});
     if(!result)remaining.push(item);
   }
@@ -174,7 +201,9 @@ async function flushQueue(){
   if(!remaining.length){
     await loadShared();
     render();
-  }else setSync(remaining.length+' changes still waiting to sync','pending');
+  }else if(remaining.some(item=>item.actor!==currentUser())){
+    setSync('Pending scores belong to another golfer — sign in as that golfer to sync','bad');
+  }else setSync(remaining.length+' changes need review or another sync attempt','pending');
 }
 function locked(round,group){return !!state.locks?.[round]?.[group]}
 function canEdit(round,group){
@@ -219,7 +248,7 @@ function focusMissingScore(missing){
 }
 function syncPanel(){
   return '<div class="sync-panel"><span class="sync-dot"></span><strong data-sync-status class="sync-status '+syncTone+'">'+syncMessage+'</strong>'+
-    (queue().length?'<button class="secondary small" id="retrySync">Retry Now</button>':'')+'</div>';
+    (queue().length?'<button class="secondary small" id="retrySync">Retry Now</button><button class="secondary small" id="discardQueue">Discard Pending</button>':'')+'</div>';
 }
 function commissionerUnlockPanel(){
   if(currentUser()!=='David Glenn')return '';
@@ -267,6 +296,7 @@ admin=function(){
   const events=(state.activity||[]).slice(0,100);
   const eventRows=events.length?events.map(x=>'<tr><td>'+when(x.created_at)+'</td><td>'+escapeHtml(x.actor)+'</td><td>'+escapeHtml(x.action)+'</td><td>'+escapeHtml(x.detail)+'</td></tr>').join(''):'<tr><td colspan="4">No activity recorded yet.</td></tr>';
   const audit=(state.audit||[]).slice(0,30);
+  const backupOptions=(state.backups||[]).map(x=>'<option value="'+Number(x.id)+'">'+escapeHtml(new Date(x.created_at).toLocaleString()+' · '+x.reason+' · '+x.created_by)+'</option>').join('');
   const auditRows=audit.length?audit.map(x=>
     '<tr><td>'+new Date(x.created_at).toLocaleString()+'</td><td>'+x.actor+'</td><td>R'+x.round_no+' · H'+x.hole+' · '+x.player+'</td><td>'+
     (x.old_gross??'—')+' → '+(x.new_gross??'—')+'</td><td>'+(x.undone_at?'Undone':'<button class="secondary small" data-undo="'+x.id+'">Undo</button>')+'</td></tr>'
@@ -275,8 +305,10 @@ admin=function(){
     '<p><b>Signed in:</b> '+(currentUser()||'None')+(currentUser()==='David Glenn'?' · Commissioner':'')+'</p>'+
     '<div class="integrity-actions"><button class="primary" id="manualBackup">Create Backup</button>'+
     '<button class="secondary" id="exportCsv">Download Scores CSV</button>'+
-    '<button class="secondary" id="exportJson">Download Full Backup</button>'+
+    '<button class="secondary" id="exportJson">Download Current State</button>'+
     '<button class="secondary" id="changePlayer">Change Player / PIN</button></div>'+
+    '<div class="pin-reset"><label><b>Restore a Saved Checkpoint</b><select id="restoreBackupId"><option value="">Select backup</option>'+backupOptions+'</select></label><button class="secondary" id="restoreBackup" '+(backupOptions?'':'disabled')+'>Restore Selected Backup</button></div>'+
+    '<p class="notice">Restoring saves a new checkpoint first. It replaces scores, wagers, charges, and scorecard locks, but does not change PINs or erase the audit history. Other phones must refresh; pending offline scores need review.</p>'+
     '<div class="pin-reset"><label><b>Commissioner PIN Recovery</b><select id="resetPinPlayer"><option value="">Select golfer</option>'+
     PLAYERS.filter(p=>p.name!=='David Glenn').map(p=>'<option>'+p.name+'</option>').join('')+
     '</select></label><button class="secondary" id="resetPlayerPin">Reset Selected PIN</button></div>'+
@@ -300,6 +332,10 @@ bind=function(){
   },true));
   originalBind();
   document.querySelector('#retrySync')?.addEventListener('click',flushQueue);
+  document.querySelector('#discardQueue')?.addEventListener('click',async()=>{
+    if(!confirm('Permanently discard the unsynced score changes on this device?'))return;
+    setQueue([]);await loadShared();render();
+  });
   document.querySelector('#findMissingScore')?.addEventListener('click',()=>{
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
     const missing=firstMissingScore(round,group);
@@ -340,6 +376,14 @@ bind=function(){
   document.querySelector('#manualBackup')?.addEventListener('click',async()=>{
     const result=await apiPost({op:'backup'});
     if(result){await loadShared();render();alert('Backup created.')}
+  });
+  document.querySelector('#restoreBackup')?.addEventListener('click',async()=>{
+    const backupId=Number(document.querySelector('#restoreBackupId')?.value);
+    if(!backupId)return;
+    if(queue().length){alert('Sync or discard the pending scores on this device before restoring a backup.');return}
+    if(prompt('This replaces the beta scores, wagers, charges, and locks for everyone. Type RESTORE to continue:')!=='RESTORE')return;
+    const result=await apiPost({op:'restoreBackup',backupId});
+    if(result){await loadShared();render();alert('Checkpoint restored. Ask other testers to refresh before making changes.')}
   });
   document.querySelector('#exportCsv')?.addEventListener('click',downloadCsv);
   document.querySelector('#exportJson')?.addEventListener('click',downloadJson);

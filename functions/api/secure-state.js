@@ -1,3 +1,4 @@
+import {hasScores,validateWagerChange,validAmount} from '../../lib/wager-rules.js';
 const PLAYERS = new Set(['Tyler Bohannon','Nick Condeni','David Glenn','Scott Karl','Will Long','Bill McCombs','Joe Phelan','Jason Wain']);
 const GROUPS = {
   1:{1:['David Glenn','Nick Condeni','Bill McCombs','Will Long'],2:['Jason Wain','Joe Phelan','Tyler Bohannon','Scott Karl']},
@@ -37,15 +38,35 @@ async function putSetting(db,key,value){
   await db.prepare("INSERT INTO tournament_settings (key,value,updated_at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at")
     .bind(key,JSON.stringify(value),now()).run();
 }
+// Compare-and-swap: a stale phone must refresh instead of overwriting another phone's edit.
+async function modifySetting(db,key,expected,change){
+  const row=await db.prepare('SELECT value,updated_at FROM tournament_settings WHERE key=?').bind(key).first();
+  if((row?.updated_at||null)!==(expected??null))return json({error:'This side-game setting changed on another phone. The latest version is loading; please review and try again.'},409);
+  const value=change(parse(row?.value,{})),revision=now()+'-'+randomHex(4);
+  const result=row
+    ?await db.prepare('UPDATE tournament_settings SET value=?,updated_at=? WHERE key=? AND updated_at=?').bind(JSON.stringify(value),revision,key,row.updated_at).run()
+    :await db.prepare('INSERT OR IGNORE INTO tournament_settings (key,value,updated_at) VALUES (?,?,?)').bind(key,JSON.stringify(value),revision).run();
+  if(result.meta.changes!==1)return json({error:'Another phone saved this setting first. Refresh and try again.'},409);
+  return json({ok:true,revision,settingKey:key});
+}
+async function mutateServerSetting(db,key,change){
+  for(let attempt=0;attempt<4;attempt++){
+    const row=await db.prepare('SELECT updated_at FROM tournament_settings WHERE key=?').bind(key).first();
+    const result=await modifySetting(db,key,row?.updated_at||null,change);
+    if(result.status!==409)return result;
+  }
+  return json({error:'Another scorecard request changed; please retry'},409);
+}
 
 async function snapshot(db){
-  const [scores,players,settings,charges]=await Promise.all([
+  const [scores,players,settings,charges,locks]=await Promise.all([
     db.prepare('SELECT round_no,player,hole,gross FROM tournament_scores ORDER BY round_no,player,hole').all(),
     db.prepare('SELECT player,photo,setup_at,last_accessed_at FROM tournament_players').all(),
-    db.prepare('SELECT key,value FROM tournament_settings').all(),
-    db.prepare('SELECT player,amount FROM tournament_charges').all()
+    db.prepare('SELECT key,value,updated_at FROM tournament_settings').all(),
+    db.prepare('SELECT player,amount FROM tournament_charges').all(),
+    db.prepare('SELECT round_no,group_no,locked_by,locked_at FROM tournament_group_locks').all()
   ]);
-  const out={scores:{},setup:{},access:{},photos:{},sideGames:{1:'None',2:'None',3:'None',4:'None'},fortyBallSelections:{},fortyBallBets:{},nassauGroups:{},nassauBets:{},unlockRequests:{},charges:{},frozen:false};
+  const out={backupVersion:2,scores:{},setup:{},access:{},photos:{},sideGames:{1:'None',2:'None',3:'None',4:'None'},fortyBallSelections:{},fortyBallBets:{},nassauGroups:{},nassauBets:{},unlockRequests:{},charges:{},locks:{},revisions:{},frozen:false,epoch:null};
   for(const s of scores.results){
     out.scores[s.round_no]??={};out.scores[s.round_no][s.player]??={};out.scores[s.round_no][s.player][s.hole]=String(s.gross);
   }
@@ -53,7 +74,9 @@ async function snapshot(db){
     if(p.photo)out.photos[p.player]=p.photo;if(p.setup_at)out.setup[p.player]=p.setup_at;if(p.last_accessed_at)out.access[p.player]=p.last_accessed_at;
   }
   for(const s of settings.results){
+    out.revisions[s.key]=s.updated_at;
     const value=parse(s.value,null);
+    if(s.key==='epoch')out.epoch=value;
     if(s.key==='sideGames')out.sideGames=value||out.sideGames;
     if(s.key==='fortyBallSelections')out.fortyBallSelections=value||{};
     if(s.key==='fortyBallBets')out.fortyBallBets=value||{};
@@ -63,6 +86,7 @@ async function snapshot(db){
     if(s.key==='frozen')out.frozen=!!value;
   }
   for(const c of charges.results)out.charges[c.player]=Number(c.amount);
+  for(const lock of locks.results){out.locks[lock.round_no]??={};out.locks[lock.round_no][lock.group_no]={lockedBy:lock.locked_by,lockedAt:lock.locked_at}}
   return out;
 }
 
@@ -77,7 +101,7 @@ async function authenticate(db,request,body={}){
 
 async function createBackup(db,reason,actor,force=false){
   if(!force){
-    const recent=await db.prepare("SELECT id FROM tournament_backups WHERE created_at > datetime('now','-15 minutes') LIMIT 1").first();
+    const recent=await db.prepare("SELECT id FROM tournament_backups WHERE datetime(created_at) > datetime('now','-15 minutes') LIMIT 1").first();
     if(recent)return recent.id;
   }
   const state=await snapshot(db);
@@ -85,6 +109,42 @@ async function createBackup(db,reason,actor,force=false){
     .bind(reason,JSON.stringify(state),actor,now()).run();
   await db.prepare('DELETE FROM tournament_backups WHERE id NOT IN (SELECT id FROM tournament_backups ORDER BY created_at DESC LIMIT 40)').run();
   return result.meta.last_row_id;
+}
+
+async function restoreBackup(db,id,actor){
+  const row=await db.prepare('SELECT snapshot FROM tournament_backups WHERE id=?').bind(id).first();
+  if(!row)return json({error:'Backup not found'},404);
+  const saved=parse(row.snapshot,null);
+  if(saved?.backupVersion!==2||!saved.scores||!saved.locks||!saved.nassauBets)return json({error:'This older backup cannot be restored in the app'},409);
+  const scores=[],players=[],charges=[],locks=[],stamp=now();
+  for(const [r,perPlayer] of Object.entries(saved.scores))for(const [name,holes] of Object.entries(perPlayer))for(const [h,gross] of Object.entries(holes)){
+    if(!GROUPS[Number(r)]||!PLAYERS.has(name)||!(Number(h)>=1&&Number(h)<=18)||!(Number(gross)>=1&&Number(gross)<=20))return json({error:'Invalid backup score'},409);
+    scores.push([Number(r),name,Number(h),Number(gross)]);
+  }
+  for(const name of PLAYERS)if(saved.photos?.[name]||saved.setup?.[name]||saved.access?.[name])players.push([name,saved.photos?.[name]||null,saved.setup?.[name]||null,saved.access?.[name]||null]);
+  for(const [name,amount] of Object.entries(saved.charges||{})){if(!PLAYERS.has(name)||!Number.isFinite(Number(amount)))return json({error:'Invalid backup charge'},409);charges.push([name,Number(amount)])}
+  for(const [r,groups] of Object.entries(saved.locks))for(const [g,lock] of Object.entries(groups)){
+    if(!GROUPS[Number(r)]?.[Number(g)]||!PLAYERS.has(lock.lockedBy))return json({error:'Invalid backup lock'},409);
+    locks.push([Number(r),Number(g),lock.lockedBy,lock.lockedAt]);
+  }
+  // A single D1 batch is transactional. Preserve credentials, history and all backup rows.
+  await createBackup(db,`Before restoring backup ${id}`,actor,true);
+  const epoch=randomHex(12);
+  const statements=[
+    db.prepare('DELETE FROM tournament_scores'),db.prepare('DELETE FROM tournament_players'),
+    db.prepare('DELETE FROM tournament_settings'),db.prepare('DELETE FROM tournament_charges'),db.prepare('DELETE FROM tournament_group_locks'),
+    db.prepare("INSERT INTO tournament_scores (round_no,player,hole,gross,updated_at) SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]'),json_extract(value,'$[2]'),json_extract(value,'$[3]'),? FROM json_each(?)").bind(stamp,JSON.stringify(scores)),
+    db.prepare("INSERT INTO tournament_players (player,photo,setup_at,last_accessed_at,updated_at) SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]'),json_extract(value,'$[2]'),json_extract(value,'$[3]'),? FROM json_each(?)").bind(stamp,JSON.stringify(players)),
+    db.prepare("INSERT INTO tournament_charges (player,amount,updated_at) SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]'),? FROM json_each(?)").bind(stamp,JSON.stringify(charges)),
+    db.prepare("INSERT INTO tournament_group_locks (round_no,group_no,locked_by,locked_at) SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]'),json_extract(value,'$[2]'),json_extract(value,'$[3]') FROM json_each(?)").bind(JSON.stringify(locks))
+  ];
+  for(const key of ['sideGames','fortyBallSelections','fortyBallBets','nassauGroups','nassauBets','frozen']){
+    statements.push(db.prepare('INSERT INTO tournament_settings (key,value,updated_at) VALUES (?,?,?)').bind(key,JSON.stringify(saved[key]??(key==='frozen'?false:{})),stamp+'-'+randomHex(4)));
+  }
+  statements.push(db.prepare('INSERT INTO tournament_settings (key,value,updated_at) VALUES (?,?,?)').bind('epoch',JSON.stringify(epoch),stamp+'-'+randomHex(4)));
+  await db.batch(statements);
+  await activity(db,actor,'Backup restored',`Backup ${id}`);
+  return json({ok:true,epoch});
 }
 
 async function authAction(db,body){
@@ -109,7 +169,14 @@ async function authAction(db,body){
   return json({ok:true,player,role,token,firstUse:!existing});
 }
 
-async function baseOperation(db,body){
+async function groupScores(db,round,group){
+  const rows=await db.prepare('SELECT player,hole,gross FROM tournament_scores WHERE round_no=?').bind(round).all();
+  const names=GROUPS[round][group],scores={};
+  for(const row of rows.results)if(names.includes(row.player)){scores[row.player]??={};scores[row.player][row.hole]=row.gross}
+  return scores;
+}
+async function isLocked(db,round,group){return !!await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first()}
+async function baseOperation(db,body,actor){
   const op=body?.op;
   if(body.player&&!PLAYERS.has(body.player))return json({error:'Unknown player'},400);
   if(op==='score'){
@@ -138,29 +205,47 @@ async function baseOperation(db,body){
     await db.prepare('INSERT INTO tournament_charges (player,amount,updated_at) VALUES (?,?,?) ON CONFLICT(player) DO UPDATE SET amount=excluded.amount,updated_at=excluded.updated_at')
       .bind(body.player,amount,now()).run();
   }else if(op==='sideGame'){
-    const current=await setting(db,'sideGames',{1:'None',2:'None',3:'None',4:'None'});current[String(body.round)]=body.value;await putSetting(db,'sideGames',current);
+    const round=Number(body.round);
+    if(!GROUPS[round]||!['None','40 Ball','Nassau 5-5-5-1-1-1','Nassau 5-5-5-3','Nassau 6-6-6'].includes(body.value))return json({error:'Invalid side game'},400);
+    if(await isLocked(db,round,1)||await isLocked(db,round,2))return json({error:'Unlock both scorecards before changing the side game'},423);
+    if(actor?.role!=='admin'&&(hasScores(GROUPS[round][1],await groupScores(db,round,1))||hasScores(GROUPS[round][2],await groupScores(db,round,2)))){
+      const current=await setting(db,'sideGames',{});if(current[round]!==body.value)return json({error:'Ask the commissioner to change the side game after scoring begins'},409);
+    }
+    return modifySetting(db,'sideGames',body.expectedRevision,current=>{current[String(round)]=body.value;return current});
   }else if(op==='nassauGroup'){
     const round=Number(body.round),group=Number(body.group);if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid Nassau group'},400);
-    const current=await setting(db,'nassauGroups',{});current[String(round)]??={};
-    if(body.value)current[String(round)][String(group)]=body.value==='Nassau 6-6-6'?'Nassau 6-6-6':'Nassau 5-5-5-3';else delete current[String(round)][String(group)];
-    await putSetting(db,'nassauGroups',current);
+    if(body.value&& !['Nassau 6-6-6','Nassau 5-5-5-1-1-1','Nassau 5-5-5-3'].includes(body.value))return json({error:'Invalid Nassau format'},400);
+    if(await isLocked(db,round,group))return json({error:'Unlock the scorecard before changing its side game'},423);
+    const existing=await setting(db,'nassauGroups',{}),old=existing[round]?.[group]||null,value=body.value?(body.value==='Nassau 6-6-6'?'Nassau 6-6-6':'Nassau 5-5-5-1-1-1'):null;
+    const wagers=await setting(db,'nassauBets',{});
+    if(old!==value&&(wagers[round]?.[group]?.presses||[]).length)return json({error:'Remove recorded presses before changing the Nassau format'},409);
+    if(old!==value&&hasScores(GROUPS[round][group],await groupScores(db,round,group))&&actor?.role!=='admin')return json({error:'Ask the commissioner to change a format after scoring begins'},409);
+    return modifySetting(db,'nassauGroups',body.expectedRevision,current=>{current[String(round)]??={};if(value)current[String(round)][String(group)]=value;else delete current[String(round)][String(group)];return current});
   }else if(op==='nassauBetConfig'){
     const round=Number(body.round),group=Number(body.group);if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid Nassau bet group'},400);
-    const raw=body.config||{},value=Math.max(0,Math.min(10000,Number(raw.value||0)));
-    const presses=(Array.isArray(raw.presses)?raw.presses:[]).slice(0,40).map((p,i)=>({id:String(p.id||`p${Date.now()}${i}`).slice(0,80),segment:Math.max(0,Math.min(3,Number(p.segment)||0)),fromHole:Math.max(1,Math.min(18,Number(p.fromHole)||1)),pressedBy:p.pressedBy==='b'?'b':'a',amount:Math.max(0,Math.min(10000,Number(p.amount||0))),parentPressId:p.parentPressId?String(p.parentPressId).slice(0,80):null}));
-    const current=await setting(db,'nassauBets',{});current[String(round)]??={};current[String(round)][String(group)]={value,presses};await putSetting(db,'nassauBets',current);
+    if(await isLocked(db,round,group))return json({error:'Unlock the scorecard before changing wagers'},423);
+    const current=await setting(db,'nassauBets',{}),previous=current[round]?.[group]||{value:0,presses:[]},formats=await setting(db,'nassauGroups',{}),format=formats[round]?.[group];
+    const games=await setting(db,'sideGames',{});if(games[round]==='40 Ball')return json({error:'Nassau wagers are unavailable during 40 Ball'},409);
+    const error=validateWagerChange({names:GROUPS[round][group],format,scores:await groupScores(db,round,group),previous,next:body.config,actor:actor?.player,admin:actor?.role==='admin'});
+    if(error)return json({error},409);
+    return modifySetting(db,'nassauBets',body.expectedRevision,value=>{value[String(round)]??={};value[String(round)][String(group)]=body.config;return value});
   }else if(op==='fortyBallSelection'){
     const round=Number(body.round),group=Number(body.group),hole=Number(body.hole);if(!(round>=1&&round<=4&&group>=1&&group<=2&&hole>=1&&hole<=18&&PLAYERS.has(body.player)))return json({error:'Invalid 40 Ball selection'},400);
-    const current=await setting(db,'fortyBallSelections',{});current[String(round)]??={};current[String(round)][String(group)]??={};const key=`${body.player}|${hole}`;
-    if(body.value)current[String(round)][String(group)][key]=true;else delete current[String(round)][String(group)][key];await putSetting(db,'fortyBallSelections',current);
+    if(!inGroup(round,group,body.player))return json({error:'Golfer is not in this group'},400);
+    if(await isLocked(db,round,group))return json({error:'Unlock the scorecard before changing 40 Ball selections'},423);
+    const games=await setting(db,'sideGames',{});if(games[round]!=='40 Ball')return json({error:'40 Ball is not selected for this round'},409);
+    const scored=await db.prepare('SELECT gross FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,body.player,hole).first();
+    if(body.value&&!scored)return json({error:'Enter a score before counting it in 40 Ball'},409);
+    return modifySetting(db,'fortyBallSelections',body.expectedRevision,current=>{current[String(round)]??={};current[String(round)][String(group)]??={};const key=`${body.player}|${hole}`;if(body.value)current[String(round)][String(group)][key]=true;else delete current[String(round)][String(group)][key];return current});
   }else if(op==='fortyBallBet'){
-    const round=Number(body.round),value=Math.max(0,Math.min(9999,Number(body.value||0)));if(!(round>=1&&round<=4))return json({error:'Invalid 40 Ball wager'},400);
-    const current=await setting(db,'fortyBallBets',{});current[String(round)]=value;await putSetting(db,'fortyBallBets',current);
+    const round=Number(body.round),value=Number(body.value);if(!GROUPS[round]||!validAmount(value))return json({error:'Invalid 40 Ball wager'},400);
+    if(await isLocked(db,round,1)||await isLocked(db,round,2))return json({error:'Unlock both scorecards before changing the wager'},423);
+    const current=await setting(db,'fortyBallBets',{});
+    if(actor?.role!=='admin'&&Number(current[round]||0)!==value&&(hasScores(GROUPS[round][1],await groupScores(db,round,1))||hasScores(GROUPS[round][2],await groupScores(db,round,2))))return json({error:'Ask the commissioner to change a wager after scoring begins'},409);
+    return modifySetting(db,'fortyBallBets',body.expectedRevision,current=>{current[String(round)]=value;return current});
   }else if(op==='frozen')await putSetting(db,'frozen',!!body.value);
   else if(op==='clearScores')await db.prepare('DELETE FROM tournament_scores').run();
-  else if(op==='reset')await db.batch([
-    db.prepare('DELETE FROM tournament_scores'),db.prepare('DELETE FROM tournament_players'),db.prepare('DELETE FROM tournament_settings'),db.prepare('DELETE FROM tournament_charges')
-  ]);
+  else if(op==='reset')return json({error:'Partial reset is disabled. Use a checkpoint restore or a verified beta reset procedure.'},409);
   else return json({error:'Unknown operation'},400);
   return json({ok:true});
 }
@@ -177,12 +262,11 @@ async function handle(context){
           actor&&inGroup(Number(request.round),Number(request.group),actor.player)
         ));
       }
-      const locks=await db.prepare('SELECT round_no,group_no,locked_by,locked_at FROM tournament_group_locks ORDER BY round_no,group_no').all();out.locks={};
-      for(const lock of locks.results){out.locks[lock.round_no]??={};out.locks[lock.round_no][lock.group_no]={lockedBy:lock.locked_by,lockedAt:lock.locked_at}}
       out.safeguards={authenticated:!!actor,actor:actor?.player||null,role:actor?.role||'spectator'};
       if(actor?.role==='admin'){
         out.audit=(await db.prepare('SELECT id,round_no,group_no,player,hole,old_gross,new_gross,actor,action,created_at,undone_at,undone_by FROM tournament_score_audit ORDER BY created_at DESC LIMIT 75').all()).results;
         out.latestBackup=await db.prepare('SELECT id,reason,created_by,created_at FROM tournament_backups ORDER BY created_at DESC LIMIT 1').first();
+        out.backups=(await db.prepare("SELECT id,reason,created_by,created_at FROM tournament_backups WHERE json_extract(snapshot,'$.backupVersion')=2 ORDER BY id DESC LIMIT 10").all()).results;
         out.activity=(await db.prepare('SELECT actor,action,detail,created_at FROM tournament_activity ORDER BY id DESC LIMIT 100').all()).results;
         out.testers=(await db.prepare("SELECT c.player,c.created_at AS pin_created_at,c.updated_at AS last_sign_in,(SELECT MAX(a.created_at) FROM tournament_activity a WHERE a.actor=c.player AND a.action NOT IN ('Signed in','PIN created')) AS last_activity FROM tournament_credentials c ORDER BY c.player").all()).results;
       }
@@ -192,6 +276,8 @@ async function handle(context){
     const body=await request.json();
     if(body?.op==='auth')return authAction(db,body);
     const actor=await authenticate(db,request,body);if(!actor)return json({error:'Sign in with your player PIN'},401);
+    const epoch=await setting(db,'epoch',null);
+    if((body.epoch??null)!==epoch)return json({error:'Tournament state was restored. Refresh before submitting changes; pending offline scores need review.'},409);
     const op=String(body?.op||'');
     if(op==='lockGroup'){
       const round=Number(body.round),group=Number(body.group);if(!inGroup(round,group,actor.player)&&actor.role!=='admin')return json({error:'You can only confirm your own foursome'},403);
@@ -200,7 +286,7 @@ async function handle(context){
       await createBackup(db,`Before Round ${round} Group ${group} lock`,actor.player,true);
       await db.prepare('INSERT OR IGNORE INTO tournament_group_locks (round_no,group_no,locked_by,locked_at) VALUES (?,?,?,?)').bind(round,group,actor.player,now()).run();
       await activity(db,actor.player,'Scorecard locked',`Round ${round}, Group ${group}`);
-      const requests=await setting(db,'unlockRequests',{});delete requests[round+'-'+group];await putSetting(db,'unlockRequests',requests);
+      const cleared=await mutateServerSetting(db,'unlockRequests',requests=>{delete requests[round+'-'+group];return requests});if(!cleared.ok)return cleared;
       return json({ok:true});
     }
     if(op==='requestUnlock'){
@@ -209,9 +295,7 @@ async function handle(context){
       if(!inGroup(round,group,actor.player)&&actor.role!=='admin')return json({error:'You can only request access to your own foursome'},403);
       const locked=await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first();
       if(!locked)return json({error:'This scorecard is already open'},409);
-      const requests=await setting(db,'unlockRequests',{});
-      requests[round+'-'+group]={round,group,requestedBy:actor.player,requestedAt:now()};
-      await putSetting(db,'unlockRequests',requests);
+      const saved=await mutateServerSetting(db,'unlockRequests',requests=>{requests[round+'-'+group]={round,group,requestedBy:actor.player,requestedAt:now()};return requests});if(!saved.ok)return saved;
       await activity(db,actor.player,'Unlock requested',`Round ${round}, Group ${group}`);
       return json({ok:true});
     }
@@ -220,7 +304,7 @@ async function handle(context){
       await createBackup(db,`Before Round ${round} Group ${group} unlock`,actor.player,true);
       await db.prepare('DELETE FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).run();
       await activity(db,actor.player,'Scorecard unlocked',`Round ${round}, Group ${group}`);
-      const requests=await setting(db,'unlockRequests',{});delete requests[round+'-'+group];await putSetting(db,'unlockRequests',requests);
+      const cleared=await mutateServerSetting(db,'unlockRequests',requests=>{delete requests[round+'-'+group];return requests});if(!cleared.ok)return cleared;
       return json({ok:true});
     }
     if(op==='undoScore'){
@@ -242,6 +326,10 @@ async function handle(context){
     if(op==='backup'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const backupId=await createBackup(db,'Manual commissioner backup',actor.player,true);await activity(db,actor.player,'Backup created');return json({ok:true,backupId});
     }
+    if(op==='restoreBackup'){
+      if(actor.role!=='admin')return json({error:'Commissioner access required'},403);
+      return restoreBackup(db,Number(body.backupId),actor.player);
+    }
     const adminOnly=new Set(['charge','frozen','clearScores','reset']);if(adminOnly.has(op)&&actor.role!=='admin')return json({error:'Commissioner access required'},403);
     if(op==='photo'&&body.player!==actor.player&&actor.role!=='admin')return json({error:'You can only change your own photo'},403);
     if((op==='setup'||op==='access')&&body.player!==actor.player&&actor.role!=='admin')return json({error:'Invalid player action'},403);
@@ -251,14 +339,22 @@ async function handle(context){
       if(!group||(!inGroup(round,group,actor.player)&&actor.role!=='admin'))return json({error:'You can only score your own foursome'},403);
       if(await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first())return json({error:'This foursome scorecard is locked'},423);
       const mutation=String(body.mutationId||randomHex(12)).slice(0,100);if(await db.prepare('SELECT id FROM tournament_score_audit WHERE mutation_id=?').bind(mutation).first())return json({ok:true,duplicate:true});
-      const before=await db.prepare('SELECT gross FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,target,hole).first();await createBackup(db,'Automatic scoring checkpoint',actor.player,false);
-      const result=await baseOperation(db,body);if(!result.ok)return result;
+      const before=await db.prepare('SELECT gross FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,target,hole).first();
+      if(Number(body.expectedGross??0)!==Number(before?.gross??0))return json({error:'This score changed on another phone. Refresh and review before editing it.'},409);
+      const gross=Number(body.gross||0);if(!(Number.isInteger(gross)&&gross>=0&&gross<=20))return json({error:'Invalid gross score'},400);
+      await createBackup(db,'Automatic scoring checkpoint',actor.player,false);
+      const saved=!gross
+        ?await db.prepare('DELETE FROM tournament_scores WHERE round_no=? AND player=? AND hole=? AND gross=?').bind(round,target,hole,Number(body.expectedGross)).run()
+        :before
+          ?await db.prepare('UPDATE tournament_scores SET gross=?,updated_at=? WHERE round_no=? AND player=? AND hole=? AND gross=?').bind(gross,now(),round,target,hole,Number(body.expectedGross)).run()
+          :await db.prepare('INSERT OR IGNORE INTO tournament_scores (round_no,player,hole,gross,updated_at) VALUES (?,?,?,?,?)').bind(round,target,hole,gross,now()).run();
+      if(saved.meta.changes!==1)return json({error:'This score changed on another phone. Refresh and review before editing it.'},409);
       await db.prepare('INSERT INTO tournament_score_audit (mutation_id,round_no,group_no,player,hole,old_gross,new_gross,actor,action,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
         .bind(mutation,round,group,target,hole,before?.gross??null,Number(body.gross)||null,actor.player,'score',now()).run();
       await activity(db,actor.player,'Score edited',`Round ${round}, ${target}, Hole ${hole}: ${before?.gross??'blank'} → ${Number(body.gross)||'blank'}`);
       return json({ok:true});
     }
-    const result=await baseOperation(db,body);
+    const result=await baseOperation(db,body,actor);
     if(result.ok&&['sideGame','nassauGroup','nassauBetConfig','fortyBallBet','fortyBallSelection','charge','frozen','clearScores','reset'].includes(op)){
       const scope=`Round ${body.round||'all'}${body.group?', Group '+body.group:''}${body.hole?', Hole '+body.hole:''}`;
       const detail=op==='charge'?`${body.player}: $${Number(body.amount||0)}`:op==='frozen'?'Index freeze '+(body.value?'enabled':'disabled'):op==='sideGame'?`${scope}: ${body.value}`:op==='nassauGroup'?`${scope}: ${body.value||'none'}`:op==='nassauBetConfig'?`${scope}: $${Number(body.config?.value||0)}, ${(body.config?.presses||[]).length} presses`:op==='fortyBallBet'?`${scope}: $${Number(body.value||0)}`:op==='fortyBallSelection'?`${scope}, ${body.player}: ${body.value?'count':'exclude'}`:scope;
