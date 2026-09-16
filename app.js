@@ -489,9 +489,7 @@ function sideGameResults(){
     body=`
       <div class="callout">
         <b>No side game selected for this round.</b><br>
-        Choose 40 Ball or Nassau 5-5-5-3 on the Score screen.
-        The same gross scores will automatically feed both Stableford
-        and the selected side-game results.
+        Choose 40 Ball or a Nassau format on the Score screen.
       </div>
     `;
   }
