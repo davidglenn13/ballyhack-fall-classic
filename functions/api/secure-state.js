@@ -10,6 +10,14 @@ function json(data,status=200){
   return Response.json(data,{status,headers:{'cache-control':'no-store'}});
 }
 function now(){return new Date().toISOString()}
+let activityReady;
+async function ensureActivity(db){
+  activityReady??=db.prepare('CREATE TABLE IF NOT EXISTS tournament_activity (id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, detail TEXT, created_at TEXT NOT NULL)').run().catch(error=>{activityReady=null;throw error});
+  await activityReady;
+}
+async function activity(db,actor,action,detail=''){
+  await db.prepare('INSERT INTO tournament_activity (actor,action,detail,created_at) VALUES (?,?,?,?)').bind(actor,action,detail,now()).run();
+}
 function hex(bytes){return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function randomHex(size=32){const bytes=new Uint8Array(size);crypto.getRandomValues(bytes);return hex(bytes)}
 function same(a,b){
@@ -92,10 +100,12 @@ async function authAction(db,body){
     const salt=randomHex(16);
     await db.prepare('INSERT INTO tournament_credentials (player,pin_hash,salt,role,created_at,updated_at) VALUES (?,?,?,?,?,?)')
       .bind(player,await pinHash(pin,salt),salt,role,now(),now()).run();
+    await activity(db,player,'PIN created');
   }
   const token=randomHex(32),expires=new Date(Date.now()+30*86400000).toISOString();
   await db.prepare('UPDATE tournament_credentials SET token_hash=?,token_expires_at=?,updated_at=? WHERE player=?')
     .bind(await sha256(token),expires,now(),player).run();
+  await activity(db,player,'Signed in');
   return json({ok:true,player,role,token,firstUse:!existing});
 }
 
@@ -159,6 +169,7 @@ async function handle(context){
   const {request,env}=context,db=env.DB;
   if(!db)return json({error:'Cloudflare D1 binding DB is not configured'},503);
   try{
+    await ensureActivity(db);
     if(request.method==='GET'){
       const out=await snapshot(db),actor=await authenticate(db,request);
       if(actor?.role!=='admin'){
@@ -172,6 +183,8 @@ async function handle(context){
       if(actor?.role==='admin'){
         out.audit=(await db.prepare('SELECT id,round_no,group_no,player,hole,old_gross,new_gross,actor,action,created_at,undone_at,undone_by FROM tournament_score_audit ORDER BY created_at DESC LIMIT 75').all()).results;
         out.latestBackup=await db.prepare('SELECT id,reason,created_by,created_at FROM tournament_backups ORDER BY created_at DESC LIMIT 1').first();
+        out.activity=(await db.prepare('SELECT actor,action,detail,created_at FROM tournament_activity ORDER BY id DESC LIMIT 100').all()).results;
+        out.testers=(await db.prepare("SELECT c.player,c.created_at AS pin_created_at,c.updated_at AS last_sign_in,(SELECT MAX(a.created_at) FROM tournament_activity a WHERE a.actor=c.player AND a.action NOT IN ('Signed in','PIN created')) AS last_activity FROM tournament_credentials c ORDER BY c.player").all()).results;
       }
       return json(out);
     }
@@ -186,6 +199,7 @@ async function handle(context){
       if(Number(count.count)!==72)return json({error:`Cannot lock: ${72-Number(count.count)} scores are still missing`},409);
       await createBackup(db,`Before Round ${round} Group ${group} lock`,actor.player,true);
       await db.prepare('INSERT OR IGNORE INTO tournament_group_locks (round_no,group_no,locked_by,locked_at) VALUES (?,?,?,?)').bind(round,group,actor.player,now()).run();
+      await activity(db,actor.player,'Scorecard locked',`Round ${round}, Group ${group}`);
       const requests=await setting(db,'unlockRequests',{});delete requests[round+'-'+group];await putSetting(db,'unlockRequests',requests);
       return json({ok:true});
     }
@@ -198,12 +212,14 @@ async function handle(context){
       const requests=await setting(db,'unlockRequests',{});
       requests[round+'-'+group]={round,group,requestedBy:actor.player,requestedAt:now()};
       await putSetting(db,'unlockRequests',requests);
+      await activity(db,actor.player,'Unlock requested',`Round ${round}, Group ${group}`);
       return json({ok:true});
     }
     if(op==='unlockGroup'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const round=Number(body.round),group=Number(body.group);
       await createBackup(db,`Before Round ${round} Group ${group} unlock`,actor.player,true);
       await db.prepare('DELETE FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).run();
+      await activity(db,actor.player,'Scorecard unlocked',`Round ${round}, Group ${group}`);
       const requests=await setting(db,'unlockRequests',{});delete requests[round+'-'+group];await putSetting(db,'unlockRequests',requests);
       return json({ok:true});
     }
@@ -217,14 +233,14 @@ async function handle(context){
       await db.batch([
         db.prepare('UPDATE tournament_score_audit SET undone_at=?,undone_by=? WHERE id=?').bind(timestamp,actor.player,change.id),
         db.prepare('INSERT INTO tournament_score_audit (mutation_id,round_no,group_no,player,hole,old_gross,new_gross,actor,action,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(mutation,change.round_no,change.group_no,change.player,change.hole,change.new_gross,change.old_gross,actor.player,'undo',timestamp)
-      ]);return json({ok:true});
+      ]);await activity(db,actor.player,'Score change undone',`Round ${change.round_no}, ${change.player}, Hole ${change.hole}`);return json({ok:true});
     }
     if(op==='resetPin'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const target=String(body.player||'');if(!PLAYERS.has(target)||target==='David Glenn')return json({error:'Select another golfer'},400);
-      await db.prepare('DELETE FROM tournament_credentials WHERE player=?').bind(target).run();return json({ok:true});
+      await db.prepare('DELETE FROM tournament_credentials WHERE player=?').bind(target).run();await activity(db,actor.player,'PIN reset',target);return json({ok:true});
     }
     if(op==='backup'){
-      if(actor.role!=='admin')return json({error:'Commissioner access required'},403);return json({ok:true,backupId:await createBackup(db,'Manual commissioner backup',actor.player,true)});
+      if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const backupId=await createBackup(db,'Manual commissioner backup',actor.player,true);await activity(db,actor.player,'Backup created');return json({ok:true,backupId});
     }
     const adminOnly=new Set(['charge','frozen','clearScores','reset']);if(adminOnly.has(op)&&actor.role!=='admin')return json({error:'Commissioner access required'},403);
     if(op==='photo'&&body.player!==actor.player&&actor.role!=='admin')return json({error:'You can only change your own photo'},403);
@@ -238,9 +254,17 @@ async function handle(context){
       const before=await db.prepare('SELECT gross FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,target,hole).first();await createBackup(db,'Automatic scoring checkpoint',actor.player,false);
       const result=await baseOperation(db,body);if(!result.ok)return result;
       await db.prepare('INSERT INTO tournament_score_audit (mutation_id,round_no,group_no,player,hole,old_gross,new_gross,actor,action,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
-        .bind(mutation,round,group,target,hole,before?.gross??null,Number(body.gross)||null,actor.player,'score',now()).run();return json({ok:true});
+        .bind(mutation,round,group,target,hole,before?.gross??null,Number(body.gross)||null,actor.player,'score',now()).run();
+      await activity(db,actor.player,'Score edited',`Round ${round}, ${target}, Hole ${hole}: ${before?.gross??'blank'} → ${Number(body.gross)||'blank'}`);
+      return json({ok:true});
     }
-    return baseOperation(db,body);
+    const result=await baseOperation(db,body);
+    if(result.ok&&['sideGame','nassauGroup','nassauBetConfig','fortyBallBet','fortyBallSelection','charge','frozen','clearScores','reset'].includes(op)){
+      const scope=`Round ${body.round||'all'}${body.group?', Group '+body.group:''}${body.hole?', Hole '+body.hole:''}`;
+      const detail=op==='charge'?`${body.player}: $${Number(body.amount||0)}`:op==='frozen'?'Index freeze '+(body.value?'enabled':'disabled'):op==='sideGame'?`${scope}: ${body.value}`:op==='nassauGroup'?`${scope}: ${body.value||'none'}`:op==='nassauBetConfig'?`${scope}: $${Number(body.config?.value||0)}, ${(body.config?.presses||[]).length} presses`:op==='fortyBallBet'?`${scope}: $${Number(body.value||0)}`:op==='fortyBallSelection'?`${scope}, ${body.player}: ${body.value?'count':'exclude'}`:scope;
+      await activity(db,actor.player,({sideGame:'Side game changed',nassauGroup:'Nassau format changed',nassauBetConfig:'Nassau wager changed',fortyBallBet:'40 Ball wager changed',fortyBallSelection:'40 Ball selection changed',charge:'Charge changed',frozen:'Index freeze changed',clearScores:'Scores cleared',reset:'Demo data reset'})[op],detail);
+    }
+    return result;
   }catch(error){console.error(error);return json({error:'Cloudflare database operation failed'},500)}
 }
 

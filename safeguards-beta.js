@@ -146,6 +146,8 @@ loadShared=async()=>{
       locks:{...(remote.locks||{})},
       unlockRequests:{...(remote.unlockRequests||{})},
       audit:[...(remote.audit||[])],
+      activity:[...(remote.activity||[])],
+      testers:[...(remote.testers||[])],
       sideGames:{1:'None',2:'None',3:'None',4:'None',...(remote.sideGames||{})}
     };
     reapplyQueued();
@@ -257,6 +259,13 @@ score=function(){
 
 admin=function(){
   let html=originalAdmin();
+  if(currentUser()!=='David Glenn'||!authToken())return html;
+  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const when=value=>value?new Date(value).toLocaleString():'—';
+  const testers=state.testers||[];
+  const testerRows=testers.length?testers.map(x=>'<tr><td>'+escapeHtml(x.player)+'</td><td>'+when(x.pin_created_at)+'</td><td>'+when(x.last_sign_in)+'</td><td>'+when(x.last_activity)+'</td></tr>').join(''):'<tr><td colspan="4">No PINs created yet.</td></tr>';
+  const events=(state.activity||[]).slice(0,100);
+  const eventRows=events.length?events.map(x=>'<tr><td>'+when(x.created_at)+'</td><td>'+escapeHtml(x.actor)+'</td><td>'+escapeHtml(x.action)+'</td><td>'+escapeHtml(x.detail)+'</td></tr>').join(''):'<tr><td colspan="4">No activity recorded yet.</td></tr>';
   const audit=(state.audit||[]).slice(0,30);
   const auditRows=audit.length?audit.map(x=>
     '<tr><td>'+new Date(x.created_at).toLocaleString()+'</td><td>'+x.actor+'</td><td>R'+x.round_no+' · H'+x.hole+' · '+x.player+'</td><td>'+
@@ -275,7 +284,8 @@ admin=function(){
     (state.latestBackup?new Date(state.latestBackup.created_at).toLocaleString():'not created yet')+'.</p></section>'+
     '<section class="card"><h2>Score Change History</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Changed by</th><th>Score</th><th>Change</th><th>Action</th></tr></thead><tbody>'+
     auditRows+'</tbody></table></div></section>';
-  return html+layout(integrity);
+  const activityPanel='<section class="card"><h2>Tester Activity</h2><p class="muted">Commissioner only. PIN creation is shown separately from sign-ins and changes. Events begin when this feature is published.</p><div class="table-wrap"><table><thead><tr><th>Golfer</th><th>PIN created</th><th>Last sign-in</th><th>Last change</th></tr></thead><tbody>'+testerRows+'</tbody></table></div><h3>Recent events</h3><div class="table-wrap"><table><thead><tr><th>Time</th><th>Golfer</th><th>Action</th><th>Details</th></tr></thead><tbody>'+eventRows+'</tbody></table></div></section>';
+  return html+layout(activityPanel+integrity);
 };
 
 bind=function(){
