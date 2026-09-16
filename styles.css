@@ -37,3 +37,51 @@
   .score-input{width:70px}
   .score-actions button{font-size:12px}
 }
+
+/* Phone scoring polish: keep the active hole and score entry controls easy to scan and tap. */
+@media(max-width:760px){
+  main{padding-left:10px;padding-right:10px}
+  .scoring-card{padding:12px}
+  .scoring-head{align-items:center;gap:8px}
+  .scoring-head h2{font-size:22px}
+  .live-badge{padding:7px 8px;font-size:10px}
+  .score-controls{gap:8px;margin:12px 0}
+  .score-controls select{min-height:44px;padding:9px 10px}
+  .hole-focus{grid-template-columns:54px 1fr 54px;gap:8px;padding:10px;margin:10px 0;border-radius:12px}
+  .hole-number{font-size:30px}
+  .hole-meta{font-size:13px}
+  .hole-nav{min-height:52px;width:54px}
+  .score-player{grid-template-columns:1fr 76px;gap:8px 10px;padding:12px 10px;min-height:100px}
+  .score-input{width:76px;height:62px;min-height:62px;padding:4px;font-size:28px;border:2px solid var(--navy);border-radius:10px}
+  .score-input:focus{outline:3px solid rgba(215,25,32,.28);outline-offset:2px;border-color:var(--red)}
+  .score-player-name b{font-size:15px}
+  .score-result{font-size:14px}
+  .score-actions{gap:8px;margin-top:12px}
+  .score-actions button{min-height:48px;padding:10px 9px}
+  .hole-progress{font-size:14px;white-space:nowrap}
+  .sync-panel{flex-wrap:wrap;min-height:44px;padding:9px 10px}
+  .sync-status{line-height:1.25}
+  .sync-panel .small{min-height:36px}
+}
+@media(max-width:380px){
+  .score-player{grid-template-columns:1fr 70px}
+  .score-input{width:70px}
+  .score-actions button{font-size:12px}
+}
+
+@media(max-width:760px){
+  /* Scoring order on a phone: get to the current hole before optional setup panels. */
+  .scoring-card{display:flex;flex-direction:column}
+  .scoring-card>.scoring-head{order:1}
+  .scoring-card>.score-controls{order:2}
+  .scoring-card>.hole-focus{order:3}
+  .scoring-card>.group-score-grid{order:4}
+  .scoring-card>.score-actions{order:5}
+  .scoring-card>.callout{order:6}
+  .scoring-card>.side-game-picker,
+  .scoring-card>.nassau-group-note,
+  .scoring-card>.forty-ball-beta-note{order:7}
+  .scoring-card>.score-review{order:8}
+  .scoring-card>.unlock-request-panel{order:9}
+  .scoring-card>.side-game-picker{margin-top:16px}
+}
