@@ -73,11 +73,16 @@
     const enhanced=function(){
       const r=+(sessionStorage.sideRound||sessionStorage.r||1);
       if((state.sideGames?.[r]||'None')!=='40 Ball')return original();
+      const commissioner=currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken();
+      const ownGroup=roundGroupNames(r,1).includes(currentUser())?1:roundGroupNames(r,2).includes(currentUser())?2:null;
+      const groups=commissioner?[1,2]:(ownGroup?[ownGroup]:[]);
       const a=groupSummary(r,1), b=groupSummary(r,2);
       const leader=a.rel===b.rel?'Tied':(a.rel<b.rel?'First Group leads':'Second Group leads');
       const roundOpts=ROUNDS.map((x,i)=>`<option value="${i+1}" ${r===i+1?'selected':''}>${x.name}</option>`).join('');
       const panel=(x,g)=>`<section class="side-result-panel"><h3>${g===1?'First':'Second'} Group</h3><p>${x.names.map(n=>n.split(' ')[0]).join(' · ')}</p><div class="side-kpis"><div><strong>${fmtRel(x.rel)}</strong><span>Relative to Par</span></div><div><strong>${x.count}/40</strong><span>Scores Counted</span></div><div><strong>${Math.max(0,40-x.count)}</strong><span>Still to Select</span></div></div><p class="notice">Only scores explicitly marked <b>Counted</b> on the score-entry screen are included. Lower relative-to-par total wins.</p></section>`;
-      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ROUND SIDE GAME</div><h2>40 Ball — Live Scoring</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Live Status</b><span>${leader}</span></div><div><b>Round Rule</b><span>One 40 Ball selection applies to both groups. Each group selects exactly 40 of its 72 net hole scores.</span></div></div>${panel(a,1)}${panel(b,2)}</section>`);
+      const roundControl=commissioner?`<label>Round<select id="sideRoundSel">${roundOpts}</select></label>`:`<span class="side-private-label">Your group · ${ROUNDS[r-1]?.name||'Current round'}</span>`;
+      const summary=commissioner?`<div class="side-summary"><div><b>Live Status</b><span>${leader}</span></div><div><b>Round Rule</b><span>One 40 Ball selection applies to both groups. Each group selects exactly 40 of its 72 net hole scores.</span></div></div>`:`<div class="side-summary side-private-summary"><div><b>Private group view</b><span>Only your group’s 40 Ball selections are shown.</span></div><div><b>Round Rule</b><span>Select exactly 40 of your group’s 72 net hole scores.</span></div></div>`;
+      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ROUND SIDE GAME</div><h2>40 Ball — Live Scoring</h2></div>${roundControl}</div>${summary}${groups.map(g=>panel(g===1?a:b,g)).join('')}</section>`);
     };
     enhanced.__fortyBallBeta=true;
     sideGameResults=enhanced;
