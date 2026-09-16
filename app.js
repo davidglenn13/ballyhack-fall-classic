@@ -922,6 +922,12 @@ function cottage(){
   let t2=cottageTotal(2);
 
   return layout(`
+    <section class="card">
+      <div class="eyebrow">TEAM COMPETITION</div>
+      <h2 class="red">COTTAGE CUP</h2>
+      <p>Track the team race between Cottage 1 and Cottage 2. Live totals and each cottage’s chance to win update automatically as tournament scores are entered.</p>
+    </section>
+
     <section class="card half">
       <h2>Cottage 1</h2>
       <div class="cottage-player-list">

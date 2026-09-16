@@ -120,7 +120,7 @@
     if(x.complete&&x.winner)status=`${x.winner===1?'First':'Second'} Group wins · each winner +${money(x.value)}, each loser ${money(-x.value)}.`;
     const nets=PLAYERS.map(p=>`<div><span>${p.name}</span><strong>${x.net[p.name]>0?'+':''}${money(x.net[p.name])}</strong></div>`).join('');
     const who=pay.length?pay.map(p=>`<div class="sbc-pay"><b>${p.from}</b><span>pays</span><b>${p.to}</b><strong>${money(p.amount)}</strong></div>`).join(''):`<p class="notice compact">${x.complete?'No payment due for this round.':'Payments will appear when the 40 Ball result is complete.'}</p>`;
-    return `<section class="fbw-round-cash"><div class="eyebrow">40 BALL WAGER</div><h3>Round Cash Result</h3><p>${status}</p><div class="sbc-net">${nets}</div><h4>Who Pays Who</h4>${who}</section>`;
+    return `<section class="fbw-round-cash"><div class="eyebrow">40 BALL WAGER</div><h3>Round Cash Result</h3><p>${status}</p><div class="sbc-net">${nets}</div><div class="sbc-payment-panel"><h4>Who Pays Who</h4>${who}</div></section>`;
   }
 
   function enhance40Results(){
@@ -133,7 +133,7 @@
   function ledgerHtml(title='Cumulative Side Bet Settlement'){
     const net=totalSideNet(),pay=payments(net);
     const any=Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
-    return `<section class="card sbc-ledger"><div class="eyebrow">ALL SIDE BETS</div><h2>${title}</h2><p>Nassau base matches, Nassau presses, and 40 Ball wagers are netted across all completed results. This is the running trip-wide cash ledger.</p><div class="sbc-net">${PLAYERS.map(p=>{const v=net[p.name]||0;return `<div><span>${p.name}</span><strong>${v>0?'+':''}${money(v)}</strong></div>`}).join('')}</div><h3>Who Pays Who</h3>${pay.length?pay.map(x=>`<div class="sbc-pay"><b>${x.from}</b><span>pays</span><b>${x.to}</b><strong>${money(x.amount)}</strong></div>`).join(''):`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Enter side-game wagers and completed results will populate here automatically.'}</p>`}</section>`;
+    return `<section class="card sbc-ledger"><div class="eyebrow">ALL SIDE BETS</div><h2>${title}</h2><p>Nassau base matches, Nassau presses, and 40 Ball wagers are netted across all completed results. This is the running trip-wide cash ledger.</p><div class="sbc-net">${PLAYERS.map(p=>{const v=net[p.name]||0;return `<div><span>${p.name}</span><strong>${v>0?'+':''}${money(v)}</strong></div>`}).join('')}</div><div class="sbc-payment-panel"><h3>Who Pays Who</h3>${pay.length?pay.map(x=>`<div class="sbc-pay"><b>${x.from}</b><span>pays</span><b>${x.to}</b><strong>${money(x.amount)}</strong></div>`).join(''):`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Enter side-game wagers and completed results will populate here automatically.'}</p>`}</div></section>`;
   }
 
   function ledgerPage(){
@@ -169,7 +169,7 @@
       .fbw-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:180px}
       .fbw-wager input{width:100%;font-size:16px;font-weight:900}.fbw-readonly b{font-size:14px;color:var(--text)}.fbw-readonly small{font-weight:700}
       .fbw-round-cash{margin-top:18px;padding-top:16px;border-top:2px solid var(--line)}.fbw-round-cash h3{margin:3px 0 8px}.fbw-round-cash h4{margin:14px 0 4px}
-      .sbc-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.sbc-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.sbc-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}.sbc-pay span{font-size:12px;color:var(--muted)}
+      .sbc-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.sbc-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.sbc-payment-panel{margin-top:22px;padding:16px;border:1px solid rgba(23,54,93,.20);border-left:5px solid var(--navy);border-radius:12px;background:rgba(23,54,93,.045);box-shadow:0 5px 16px rgba(23,54,93,.06)}.sbc-payment-panel h3,.sbc-payment-panel h4{margin:0 0 11px;color:var(--navy)}.sbc-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;margin-top:7px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;align-items:center}.sbc-pay span{font-size:12px;color:var(--muted)}
       @media(max-width:650px){.fbw-wager{max-width:none}.sbc-net{grid-template-columns:1fr}.sbc-pay{grid-template-columns:1fr auto 1fr}.sbc-pay strong{grid-column:1/-1;text-align:right}}
     `;document.head.appendChild(s);
   }
