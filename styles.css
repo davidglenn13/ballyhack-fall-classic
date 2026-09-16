@@ -85,3 +85,26 @@
   .scoring-card>.unlock-request-panel{order:9}
   .scoring-card>.side-game-picker{margin-top:16px}
 }
+
+ /* Scoring order on a phone: get to the current hole before optional setup panels. */
+  .scoring-card{display:flex;flex-direction:column}
+  .scoring-card>.scoring-head{order:1}
+  .scoring-card>.score-controls{order:2}
+  .scoring-card>.hole-focus{order:3}
+  .scoring-card>.group-score-grid{order:4}
+  .scoring-card>.score-actions{order:5}
+  .scoring-card>.callout{order:6}
+  .scoring-card>.side-game-picker,
+  .scoring-card>.nassau-group-note,
+  .scoring-card>.forty-ball-beta-note{order:7}
+  .scoring-card>.score-review{order:8}
+  .scoring-card>.unlock-request-panel{order:9}
+  .scoring-card>.side-game-picker{margin-top:16px}
+  .scoring-card.score-setup-required>.side-game-picker,
+  .scoring-card.score-setup-required>.nassau-group-note,
+  .scoring-card.score-setup-required>.forty-ball-beta-note{order:3}
+  .scoring-card.score-setup-required>.hole-focus{order:4}
+  .scoring-card.score-setup-required>.group-score-grid{order:5}
+  .scoring-card.score-setup-required>.score-actions{order:6}
+  .scoring-card.score-setup-required>.callout{order:7}
+}
