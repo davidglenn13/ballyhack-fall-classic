@@ -30,6 +30,29 @@ async function pinHash(pin,salt){
   const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(String(pin)),'PBKDF2',false,['deriveBits']);
   return hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new TextEncoder().encode(salt),iterations:100000},material,256));
 }
+async function loginAttempts(db){
+  await db.prepare('CREATE TABLE IF NOT EXISTS tournament_login_attempts (player TEXT PRIMARY KEY, failed_count INTEGER NOT NULL, window_start INTEGER NOT NULL, locked_until INTEGER NOT NULL DEFAULT 0)').run();
+}
+let sessionsReady;
+async function loginSessions(db){
+  sessionsReady??=db.prepare('CREATE TABLE IF NOT EXISTS tournament_login_sessions (token_hash TEXT PRIMARY KEY, player TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL)').run().catch(error=>{sessionsReady=null;throw error});
+  await sessionsReady;
+}
+function waitForLogin(lockedUntil,clock){
+  const seconds=Math.max(1,Math.ceil((lockedUntil-clock)/1000));
+  return json({error:`Too many incorrect PIN attempts. Try again in ${seconds} seconds.`,retryAfterSeconds:seconds},429);
+}
+async function recordBadPin(db,player,clock){
+  const cutoff=clock-15*60*1000;
+  const row=await db.prepare(`INSERT INTO tournament_login_attempts (player,failed_count,window_start,locked_until)
+    VALUES (?,1,?,0) ON CONFLICT(player) DO UPDATE SET
+      locked_until=CASE WHEN window_start<=? THEN 0 WHEN failed_count+1<5 THEN 0
+        WHEN failed_count+1=5 THEN ?+60000 WHEN failed_count+1=6 THEN ?+300000 ELSE ?+900000 END,
+      failed_count=CASE WHEN window_start<=? THEN 1 ELSE failed_count+1 END,
+      window_start=CASE WHEN window_start<=? THEN ? ELSE window_start END
+    RETURNING failed_count,locked_until`).bind(player,clock,cutoff,clock,clock,clock,cutoff,cutoff,clock).first();
+  return Number(row.locked_until)>clock?waitForLogin(Number(row.locked_until),clock):json({error:'Incorrect PIN'},401);
+}
 function groupFor(round,player){return Number(Object.keys(GROUPS[round]||{}).find(g=>GROUPS[round][g].includes(player))||0)}
 function inGroup(round,group,player){return !!GROUPS[round]?.[group]?.includes(player)}
 function parse(value,fallback={}){try{return value==null?fallback:JSON.parse(value)}catch{return fallback}}
@@ -94,8 +117,23 @@ async function authenticate(db,request,body={}){
   const player=String(body.actor||request.headers.get('x-ballyhack-player')||'');
   const token=String(body.authToken||request.headers.get('x-ballyhack-token')||'');
   if(!PLAYERS.has(player)||!token)return null;
+  await loginSessions(db);
+  const digest=await sha256(token);
+  const session=await db.prepare('SELECT expires_at FROM tournament_login_sessions WHERE player=? AND token_hash=?').bind(player,digest).first();
   const row=await db.prepare('SELECT player,token_hash,token_expires_at,role FROM tournament_credentials WHERE player=?').bind(player).first();
-  if(!row?.token_hash||Date.parse(row.token_expires_at)<=Date.now()||!same(row.token_hash,await sha256(token)))return null;
+  if(!row)return null;
+  if(session){
+    if(Date.parse(session.expires_at)<=Date.now())return null;
+    if(Date.parse(session.expires_at)-Date.now()<30*86400000){
+      await db.prepare('UPDATE tournament_login_sessions SET expires_at=? WHERE player=? AND token_hash=?')
+        .bind(new Date(Date.now()+365*86400000).toISOString(),player,digest).run();
+    }
+  }else{
+    // Existing signed-in devices migrate without asking for their PIN again.
+    if(!row.token_hash||Date.parse(row.token_expires_at)<=Date.now()||!same(row.token_hash,digest))return null;
+    await db.prepare('INSERT OR IGNORE INTO tournament_login_sessions (token_hash,player,created_at,expires_at) VALUES (?,?,?,?)')
+      .bind(digest,player,now(),new Date(Date.now()+365*86400000).toISOString()).run();
+  }
   return {player,role:row.role};
 }
 
@@ -151,10 +189,14 @@ async function authAction(db,body){
   const player=String(body.player||''),pin=String(body.pin||'');
   if(!PLAYERS.has(player))return json({error:'Select a golfer'},400);
   if(!/^\d{4}$/.test(pin))return json({error:'PIN must be exactly four digits'},400);
+  await loginAttempts(db);
+  const clock=Date.now();
+  const attempts=await db.prepare('SELECT locked_until FROM tournament_login_attempts WHERE player=?').bind(player).first();
+  if(Number(attempts?.locked_until)>clock)return waitForLogin(Number(attempts.locked_until),clock);
   const existing=await db.prepare('SELECT pin_hash,salt,role FROM tournament_credentials WHERE player=?').bind(player).first();
   let role=player==='David Glenn'?'admin':'player';
   if(existing){
-    if(!same(existing.pin_hash,await pinHash(pin,existing.salt)))return json({error:'Incorrect PIN'},401);
+    if(!same(existing.pin_hash,await pinHash(pin,existing.salt)))return recordBadPin(db,player,clock);
     role=existing.role;
   }else{
     const salt=randomHex(16);
@@ -162,9 +204,12 @@ async function authAction(db,body){
       .bind(player,await pinHash(pin,salt),salt,role,now(),now()).run();
     await activity(db,player,'PIN created');
   }
-  const token=randomHex(32),expires=new Date(Date.now()+30*86400000).toISOString();
-  await db.prepare('UPDATE tournament_credentials SET token_hash=?,token_expires_at=?,updated_at=? WHERE player=?')
-    .bind(await sha256(token),expires,now(),player).run();
+  await db.prepare('DELETE FROM tournament_login_attempts WHERE player=?').bind(player).run();
+  await loginSessions(db);
+  const token=randomHex(32),expires=new Date(Date.now()+365*86400000).toISOString();
+  await db.prepare('INSERT INTO tournament_login_sessions (token_hash,player,created_at,expires_at) VALUES (?,?,?,?)')
+    .bind(await sha256(token),player,now(),expires).run();
+  await db.prepare('UPDATE tournament_credentials SET updated_at=? WHERE player=?').bind(now(),player).run();
   await activity(db,player,'Signed in');
   return json({ok:true,player,role,token,firstUse:!existing});
 }
@@ -321,7 +366,12 @@ async function handle(context){
     }
     if(op==='resetPin'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const target=String(body.player||'');if(!PLAYERS.has(target)||target==='David Glenn')return json({error:'Select another golfer'},400);
-      await db.prepare('DELETE FROM tournament_credentials WHERE player=?').bind(target).run();await activity(db,actor.player,'PIN reset',target);return json({ok:true});
+      await db.prepare('DELETE FROM tournament_credentials WHERE player=?').bind(target).run();
+      await loginAttempts(db);
+      await db.prepare('DELETE FROM tournament_login_attempts WHERE player=?').bind(target).run();
+      await loginSessions(db);
+      await db.prepare('DELETE FROM tournament_login_sessions WHERE player=?').bind(target).run();
+      await activity(db,actor.player,'PIN reset',target);return json({ok:true});
     }
     if(op==='backup'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const backupId=await createBackup(db,'Manual commissioner backup',actor.player,true);await activity(db,actor.player,'Backup created');return json({ok:true,backupId});
