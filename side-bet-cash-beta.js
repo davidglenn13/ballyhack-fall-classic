@@ -106,9 +106,9 @@
     if(!picker||!sel||picker.querySelector('.fbw-wager'))return;
     const host=sel.closest('div')||picker,v=wager(r);
     if(g===1){
-      host.insertAdjacentHTML('beforeend',`<label class="fbw-wager">40 Ball wager $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-fbw-wager data-r="${r}" value="${v||''}" placeholder="5" aria-label="40 Ball wager amount"></label>`);
+      host.insertAdjacentHTML('beforeend',`<label class="fbw-wager">Wager Amount $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-fbw-wager data-r="${r}" value="${v||''}" placeholder="5" aria-label="40 Ball wager amount"></label>`);
     }else{
-      host.insertAdjacentHTML('beforeend',`<div class="fbw-wager fbw-readonly">40 Ball wager <b>${v?money(v):'not entered'}</b><small>First Group sets the wager.</small></div>`);
+      host.insertAdjacentHTML('beforeend',`<div class="fbw-wager fbw-readonly">Wager Amount <b>${v?money(v):'not entered'}</b><small>First Group sets the wager.</small></div>`);
     }
   }
 

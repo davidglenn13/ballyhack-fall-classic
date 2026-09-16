@@ -38,7 +38,7 @@
     const picker=document.querySelector('.side-game-picker'),scoreSide=document.querySelector('#scoreSideGame');
     if(!picker||!scoreSide||!hasNassau(r,g)||picker.querySelector('.nlp-wager'))return;
     const c=cfg(r,g),host=scoreSide.closest('div')||picker;
-    host.insertAdjacentHTML('beforeend',`<label class="nlp-wager">Nassau wager $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${c.value||''}" placeholder="5" aria-label="Nassau wager amount"></label>`);
+    host.insertAdjacentHTML('beforeend',`<label class="nlp-wager">Wager Amount $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${c.value||''}" placeholder="5" aria-label="Nassau wager amount"></label>`);
   }
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
 
