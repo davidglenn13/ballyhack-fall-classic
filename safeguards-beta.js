@@ -401,17 +401,20 @@ bind=function(){
 render=function(){
   const nav=document.querySelector('#nav');
   const commissioner=currentUser()==='David Glenn'&&!!authToken();
-  let commissionerTab=nav?.querySelector('button[data-tab="More"]');
-  if(commissioner&&!commissionerTab){
-    commissionerTab=document.createElement('button');
-    commissionerTab.dataset.tab='More';
-    commissionerTab.textContent='Commissioner';
-    nav.appendChild(commissionerTab);
-  }else if(!commissioner){
-    commissionerTab?.remove();
-    if(tab==='More')tab='Score';
-  }
+  if(!commissioner&&tab==='More')tab='Score';
   originalRender();
+  let commissionerTab=nav?.querySelector('button[data-tab="More"]');
+  if(commissioner){
+    if(!commissionerTab){
+      commissionerTab=document.createElement('button');
+      commissionerTab.dataset.tab='More';
+      commissionerTab.textContent='Commissioner';
+    }
+    nav.appendChild(commissionerTab);
+    commissionerTab.classList.toggle('active',tab==='More');
+  }else{
+    commissionerTab?.remove();
+  }
   updateHeaderIdentity();
   if(tab==='Score'){
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
