@@ -52,9 +52,7 @@
       panel.insertAdjacentHTML('afterbegin',`<div class="nb-controls"><div><b>Current cash result</b><small>${names.map(n=>`${n.split(' ')[0]} ${net[n]>0?'+':''}${money(net[n])}`).join(' · ')}</small></div></div><p class="notice compact">Nassau wager: <b>${cfg.value?money(cfg.value):'not entered'}</b> · ${rule}</p>`);
       panel.querySelectorAll('.nassau-segment').forEach((segEl,si)=>{
         const seg=segments[si];if(!seg)return;const o=baseOutcome(r,g,seg),small=segEl.querySelector('small');if(small)small.insertAdjacentHTML('beforeend',`<br><b>${resultText(o,cfg.value)}</b>`);
-        if(seg.singleHole){
-          segEl.insertAdjacentHTML('beforeend',`<div class="nb-no-press"><b>No press</b> · Standalone one-hole match · Value ${cfg.value?money(cfg.value):'not entered'}</div>`);
-        }else{
+        if(!seg.singleHole){
           segEl.insertAdjacentHTML('beforeend',`<details class="nb-box"><summary>Press bet (${cfg.presses.filter(p=>+p.segment===si).length})</summary>${pressList(r,g,si)}</details>`);
         }
       });

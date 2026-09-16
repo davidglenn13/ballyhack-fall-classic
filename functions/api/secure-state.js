@@ -37,7 +37,7 @@ async function snapshot(db){
     db.prepare('SELECT key,value FROM tournament_settings').all(),
     db.prepare('SELECT player,amount FROM tournament_charges').all()
   ]);
-  const out={scores:{},setup:{},access:{},photos:{},sideGames:{1:'None',2:'None',3:'None',4:'None'},fortyBallSelections:{},fortyBallBets:{},nassauGroups:{},nassauBets:{},charges:{},frozen:false};
+  const out={scores:{},setup:{},access:{},photos:{},sideGames:{1:'None',2:'None',3:'None',4:'None'},fortyBallSelections:{},fortyBallBets:{},nassauGroups:{},nassauBets:{},unlockRequests:{},charges:{},frozen:false};
   for(const s of scores.results){
     out.scores[s.round_no]??={};out.scores[s.round_no][s.player]??={};out.scores[s.round_no][s.player][s.hole]=String(s.gross);
   }
@@ -51,6 +51,7 @@ async function snapshot(db){
     if(s.key==='fortyBallBets')out.fortyBallBets=value||{};
     if(s.key==='nassauGroups')out.nassauGroups=value||{};
     if(s.key==='nassauBets')out.nassauBets=value||{};
+    if(s.key==='unlockRequests')out.unlockRequests=value||{};
     if(s.key==='frozen')out.frozen=!!value;
   }
   for(const c of charges.results)out.charges[c.player]=Number(c.amount);
@@ -160,6 +161,11 @@ async function handle(context){
   try{
     if(request.method==='GET'){
       const out=await snapshot(db),actor=await authenticate(db,request);
+      if(actor?.role!=='admin'){
+        out.unlockRequests=Object.fromEntries(Object.entries(out.unlockRequests||{}).filter(([,request])=>
+          actor&&inGroup(Number(request.round),Number(request.group),actor.player)
+        ));
+      }
       const locks=await db.prepare('SELECT round_no,group_no,locked_by,locked_at FROM tournament_group_locks ORDER BY round_no,group_no').all();out.locks={};
       for(const lock of locks.results){out.locks[lock.round_no]??={};out.locks[lock.round_no][lock.group_no]={lockedBy:lock.locked_by,lockedAt:lock.locked_at}}
       out.safeguards={authenticated:!!actor,actor:actor?.player||null,role:actor?.role||'spectator'};
@@ -179,11 +185,27 @@ async function handle(context){
       const names=GROUPS[round]?.[group]||[],count=await db.prepare('SELECT COUNT(*) AS count FROM tournament_scores WHERE round_no=? AND player IN (?,?,?,?)').bind(round,...names).first();
       if(Number(count.count)!==72)return json({error:`Cannot lock: ${72-Number(count.count)} scores are still missing`},409);
       await createBackup(db,`Before Round ${round} Group ${group} lock`,actor.player,true);
-      await db.prepare('INSERT OR IGNORE INTO tournament_group_locks (round_no,group_no,locked_by,locked_at) VALUES (?,?,?,?)').bind(round,group,actor.player,now()).run();return json({ok:true});
+      await db.prepare('INSERT OR IGNORE INTO tournament_group_locks (round_no,group_no,locked_by,locked_at) VALUES (?,?,?,?)').bind(round,group,actor.player,now()).run();
+      const requests=await setting(db,'unlockRequests',{});delete requests[round+'-'+group];await putSetting(db,'unlockRequests',requests);
+      return json({ok:true});
+    }
+    if(op==='requestUnlock'){
+      const round=Number(body.round),group=Number(body.group);
+      if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid scorecard'},400);
+      if(!inGroup(round,group,actor.player)&&actor.role!=='admin')return json({error:'You can only request access to your own foursome'},403);
+      const locked=await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first();
+      if(!locked)return json({error:'This scorecard is already open'},409);
+      const requests=await setting(db,'unlockRequests',{});
+      requests[round+'-'+group]={round,group,requestedBy:actor.player,requestedAt:now()};
+      await putSetting(db,'unlockRequests',requests);
+      return json({ok:true});
     }
     if(op==='unlockGroup'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);const round=Number(body.round),group=Number(body.group);
-      await createBackup(db,`Before Round ${round} Group ${group} unlock`,actor.player,true);await db.prepare('DELETE FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).run();return json({ok:true});
+      await createBackup(db,`Before Round ${round} Group ${group} unlock`,actor.player,true);
+      await db.prepare('DELETE FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).run();
+      const requests=await setting(db,'unlockRequests',{});delete requests[round+'-'+group];await putSetting(db,'unlockRequests',requests);
+      return json({ok:true});
     }
     if(op==='undoScore'){
       if(actor.role!=='admin')return json({error:'Commissioner access required'},403);

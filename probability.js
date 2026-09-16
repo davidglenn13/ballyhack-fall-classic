@@ -140,12 +140,9 @@
     try{
       ensureStyles();
       const model=compute();
-      const heading=app.querySelector('h2');
-      if(!heading)return;
-      const title=heading.textContent.trim();
-
-      if(title.startsWith('CHASE FOR THE CUP') && !app.querySelector('[data-win-prob="individual"]')){
-        const card=heading.closest('.card');
+      const chaseHeading=[...app.querySelectorAll('h2')].find(x=>x.textContent.trim().startsWith('CHASE FOR THE CUP'));
+      if(chaseHeading && !app.querySelector('[data-win-prob="individual"]')){
+        const card=chaseHeading.closest('.card');
         if(card)card.insertAdjacentHTML('beforeend',individualPanel(model));
       }
 

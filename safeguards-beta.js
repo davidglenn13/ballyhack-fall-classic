@@ -59,7 +59,7 @@ async function secureRequest(payload,{allowQueue=true}={}){
     authToken:payload.authToken||authToken(),
     mutationId:payload.mutationId||mutationId()
   };
-  const neverQueue=new Set(['auth','lockGroup','unlockGroup','undoScore','backup','reset','clearScores','frozen','charge']);
+  const neverQueue=new Set(['auth','lockGroup','requestUnlock','unlockGroup','undoScore','backup','reset','clearScores','frozen','charge']);
   allowQueue=allowQueue&&!neverQueue.has(enriched.op);
   try{
     const response=await fetch(SECURE_API,{
@@ -113,6 +113,7 @@ loadShared=async()=>{
       scores:{...(remote.scores||{})},
       charges:{...(remote.charges||{})},
       locks:{...(remote.locks||{})},
+      unlockRequests:{...(remote.unlockRequests||{})},
       audit:[...(remote.audit||[])],
       sideGames:{1:'None',2:'None',3:'None',4:'None',...(remote.sideGames||{})}
     };
@@ -177,22 +178,39 @@ function syncPanel(){
   return '<div class="sync-panel"><span class="sync-dot"></span><strong data-sync-status class="sync-status '+syncTone+'">'+syncMessage+'</strong>'+
     (queue().length?'<button class="secondary small" id="retrySync">Retry now</button>':'')+'</div>';
 }
+function commissionerUnlockPanel(){
+  if(currentUser()!=='David Glenn')return '';
+  if(!document.querySelector('#unlock-request-style')){
+    const style=document.createElement('style');style.id='unlock-request-style';
+    style.textContent='.unlock-request-panel{margin:12px 0;padding:14px;border:2px solid #d89a12;border-radius:12px;background:#fff8dc}.unlock-request-panel h3{margin:3px 0 10px}.unlock-request-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #ead398}.unlock-request-row small{display:block;margin-top:3px;color:#6b5a2b}@media(max-width:760px){.unlock-request-row{align-items:stretch;flex-direction:column}.unlock-request-row button{width:100%}}';
+    document.head.appendChild(style);
+  }
+  const requests=Object.values(state.unlockRequests||{});
+  if(!requests.length)return '';
+  return '<section class="unlock-request-panel"><div class="eyebrow">UNLOCK REQUESTS</div><h3>Scorecard correction requested</h3>'+requests.map(request=>
+    '<div class="unlock-request-row"><span><b>Round '+request.round+' · Group '+request.group+'</b><small>'+roundGroupNames(+request.round,+request.group).join(', ')+'</small><small>Requested by '+request.requestedBy+(request.requestedAt?' · '+new Date(request.requestedAt).toLocaleString():'')+'</small></span><button class="primary small" data-approve-unlock="'+request.round+'-'+request.group+'">Unlock Scorecard</button></div>'
+  ).join('')+'</section>';
+}
 
 score=function(){
   const round=+(sessionStorage.r||1);
   const group=+(sessionStorage.group||1);
   const progress=groupProgress(round,group);
   const isLocked=locked(round,group);
+  const unlockRequest=state.unlockRequests?.[round+'-'+group];
+  const mayRequest=isLocked&&currentUser()!=='David Glenn'&&canEdit(round,group);
   let html=originalScore();
   const review='<section class="score-review '+(isLocked?'locked':'')+'">'+
-    '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Foursome scorecard locked':'Review & confirm foursome')+'</h3>'+
-    '<p>'+(progress.complete?'All 72 gross scores are entered. Review the card before locking it.':progress.missing+' of 72 gross scores are still missing.')+'</p></div>'+
+    '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Scorecard Locked':'Review & confirm foursome')+'</h3>'+
+    (!isLocked?'<p>'+(progress.complete?'All 72 gross scores are entered. Review the card before locking it.':progress.missing+' of 72 gross scores are still missing.')+'</p>':(unlockRequest?'<p>Unlock requested by '+unlockRequest.requestedBy+'.</p>':''))+'</div>'+
     '<div class="review-actions">'+
     (!isLocked&&!progress.complete?'<button class="secondary" id="findMissingScore">Find Missing Score</button>':'')+
     (!isLocked&&progress.complete&&canEdit(round,group)?'<button class="primary" id="lockGroup">Confirm & Lock</button>':'')+
+    (mayRequest&&!unlockRequest?'<button class="secondary" id="requestUnlock">Request Unlock</button>':'')+
+    (mayRequest&&unlockRequest?'<button class="secondary" disabled>Unlock Requested</button>':'')+
     (isLocked&&currentUser()==='David Glenn'?'<button class="secondary" id="unlockGroup">Commissioner Unlock</button>':'')+
     '</div></section>';
-  html=html.replace('<section class="card scoring-card">','<section class="card scoring-card">'+syncPanel());
+  html=html.replace('<section class="card scoring-card">','<section class="card scoring-card">'+syncPanel()+commissionerUnlockPanel());
   return html.replace('</section>',review+'</section>');
 };
 
@@ -239,6 +257,18 @@ bind=function(){
     render();
     requestAnimationFrame(()=>focusMissingScore(missing));
   });
+  document.querySelector('#requestUnlock')?.addEventListener('click',async()=>{
+    const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
+    if(!confirm('Ask the commissioner to unlock this scorecard for a correction?'))return;
+    const result=await apiPost({op:'requestUnlock',round,group});
+    if(result){await loadShared();render();alert('Unlock request sent to David.')}
+  });
+  document.querySelectorAll('[data-approve-unlock]').forEach(button=>button.addEventListener('click',async()=>{
+    const [round,group]=button.dataset.approveUnlock.split('-').map(Number);
+    if(!confirm('Unlock Round '+round+', Group '+group+' for corrections?'))return;
+    const result=await apiPost({op:'unlockGroup',round,group});
+    if(result){sessionStorage.r=round;sessionStorage.group=group;await loadShared();render()}
+  }));
   document.querySelector('#lockGroup')?.addEventListener('click',async()=>{
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
     if(!confirm('Confirm all scores for this foursome and lock the scorecard?'))return;

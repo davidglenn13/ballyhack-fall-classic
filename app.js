@@ -534,8 +534,7 @@ function cottageTotal(c){
 
 const tabs=[
   'Score',
-  'Live Standings',
-  'Chase',
+  'Standings & Forecast',
   'Cottage Cup',
   'Side Games'
 ];
@@ -1338,8 +1337,7 @@ function render(){
 
   let fn={
     'Score':score,
-    'Live Standings':board,
-    'Chase':chase,
+    'Standings & Forecast':board,
     'Cottage Cup':cottage,
     'Side Games':sideGameResults,
     'More':more
