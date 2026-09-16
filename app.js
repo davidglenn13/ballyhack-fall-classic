@@ -685,7 +685,7 @@ function score(){
   }).join('');
 
   return layout(`
-    <section class="card scoring-card">
+    <section class="card scoring-card ${sideGame==='None'?'score-setup-required':'score-active'}">
 
       <div class="scoring-head">
         <div>
