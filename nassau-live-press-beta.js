@@ -10,7 +10,13 @@
     state.nassauBets[r][g].presses=Array.isArray(state.nassauBets[r][g].presses)?state.nassauBets[r][g].presses:[];
     return state.nassauBets[r][g];
   };
-  const persist=async(r,g)=>{ save(); await apiPost({op:'nassauBetConfig',round:r,group:g,config:cfg(r,g)}); };
+  const pending=new Map();
+  const persist=(r,g)=>{
+    save();
+    const key=`${r}:${g}`;
+    const next=(pending.get(key)||Promise.resolve()).catch(()=>{}).then(()=>apiPost({op:'nassauBetConfig',round:r,group:g,config:cfg(r,g)}));
+    pending.set(key,next);return next;
+  };
   const shortTeam=t=>t.map(n=>n.split(' ')[0]).join(' / ');
 
   function liveStanding(r,g,seg){
@@ -61,12 +67,6 @@
   function originalPressInSegment(c,si){ return c.presses.filter(p=>+p.segment===si&&!p.parentPressId).sort((a,b)=>(+a.fromHole)-(+b.fromHole))[0]||null; }
   function counterPressFor(c,p){ return p?c.presses.find(x=>String(x.parentPressId||'')===String(p.id)):null; }
 
-  function addWagerToPicker(r,g){
-    const picker=document.querySelector('.side-game-picker'),scoreSide=document.querySelector('#scoreSideGame');
-    if(!picker||!scoreSide||!hasNassau(r,g)||picker.querySelector('.nlp-wager'))return;
-    const c=cfg(r,g),host=scoreSide.closest('div')||picker;
-    host.insertAdjacentHTML('beforeend',`<label class="nlp-wager">Wager Amount $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${c.value||''}" placeholder="5" aria-label="Nassau wager amount"></label>`);
-  }
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
 
   function enhanceScore(){
@@ -74,7 +74,7 @@
     const scoreSide=document.querySelector('#scoreSideGame'); if(!scoreSide){removeSideGameWagerInputs();return;}
     const r=+(sessionStorage.r||1),g=+(sessionStorage.group||1),h=+(sessionStorage.hole||1);
     if(!hasNassau(r,g))return;
-    addWagerToPicker(r,g); if(app.querySelector('.nlp-card'))return;
+    if(app.querySelector('.nlp-card'))return;
     const segments=segmentsFor(r,g),si=segments.findIndex(s=>s.holes.includes(h)); if(si<0)return;
     const seg=segments[si],teams=nassauTeams(roundGroupNames(r,g),seg.pairing),c=cfg(r,g),fmt=formatFor(r,g);
     const firstHole=seg.holes[0],nextHole=nextUnplayedHole(r,g,seg),singleHole=!!seg.singleHole;
@@ -103,7 +103,7 @@
       cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS</span><h3>${losingTeam?shortTeam(losingTeam):'No team eligible'}</h3></div><div class="nlp-side"><span>Current match</span><b>${losingTeam?`${standing.margin} down`:'All square'}</b></div><div class="nlp-side"><span>New bet starts</span><b>Hole ${nextHole}</b></div>${losingTeam?`<button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press</button>`:''}</div>`);
     }
     if(!cards.length)return;
-    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Press Wagers</h2><p class="muted">Each wager is separate and runs from its starting hole through the end of ${seg.label}.</p><div class="nlp-wagers">${cards.join('')}</div>${!c.value?'<p class="notice">Enter the Nassau wager amount before recording a press.</p>':''}</section>`;
+    const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Press Wagers</h2><p class="muted">Each wager is separate and runs from its starting hole through the end of ${seg.label}.</p><label class="nlp-wager">Wager Amount $<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${c.value||''}" placeholder="Enter amount" aria-label="Nassau wager amount"></label><div class="nlp-wagers">${cards.join('')}</div>${!c.value?'<p class="notice" data-nlp-hint>Enter the wager amount above to activate Press.</p>':''}</section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     scoreCard?.insertAdjacentHTML('afterend',html);
   }
@@ -113,8 +113,8 @@
     const s=document.createElement('style');s.id='nlp-style';s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-wagers{display:grid;gap:10px;margin-top:14px}.nlp-wager-card{display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(2,minmax(100px,1fr)) auto;gap:10px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff}.nlp-wager-card.recorded{border-left:5px solid #17365d}.nlp-wager-card.available{border-left:5px solid #e11}.nlp-bet-label{display:block;color:#e11;font-size:10px;font-weight:900;letter-spacing:.08em}.nlp-wager-card h3{margin:3px 0 0}.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted);padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-wager-card button{min-width:140px}.nlp-wager-card button:disabled{opacity:.5}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-wager{max-width:none}.nlp-wager-card{grid-template-columns:1fr 1fr}.nlp-wager-card>div:first-child{grid-column:1/3}.nlp-wager-card button{grid-column:1/3;width:100%}}`;document.head.appendChild(s);
   }
 
-  document.addEventListener('input',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;w.value=w.value.replace(/\D/g,'').slice(0,3);});
-  document.addEventListener('change',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;const r=+w.dataset.r,g=+w.dataset.g,c=cfg(r,g);c.value=Math.min(999,Math.max(0,parseInt(w.value,10)||0));w.value=c.value||'';persist(r,g).then(()=>render());});
+  document.addEventListener('input',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;w.value=w.value.replace(/\D/g,'').slice(0,3);const c=cfg(+w.dataset.r,+w.dataset.g);c.value=+w.value||0;save();const card=w.closest('.nlp-card');card?.querySelectorAll('[data-nlp-add]').forEach(b=>b.disabled=!c.value);const hint=card?.querySelector('[data-nlp-hint]');if(hint)hint.hidden=!!c.value;});
+  document.addEventListener('change',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;persist(+w.dataset.r,+w.dataset.g).catch(()=>{});});
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-nlp-add]');if(!b)return;
     const r=+b.dataset.r,g=+b.dataset.g,si=+b.dataset.si,h=+b.dataset.hole,c=cfg(r,g),segments=segmentsFor(r,g),seg=segments[si];if(!seg)return;
