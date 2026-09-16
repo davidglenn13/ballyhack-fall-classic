@@ -50,7 +50,7 @@
 
     document.querySelectorAll('[data-score-player]').forEach(input=>{
       const n=input.dataset.scorePlayer, h=+input.dataset.hole;
-      const selected=!!pick[keyFor(n,h)];
+      const selected=!!input.value && !!pick[keyFor(n,h)];
       const wrap=document.createElement('div');
       wrap.className='forty-ball-toggle';
       const btn=document.createElement('button');
@@ -147,7 +147,7 @@
       padding-left:4px;
       padding-right:4px;
     }
-    .forty-ball-select:disabled{opacity:.38;cursor:not-allowed;border-color:var(--line)}
+    .forty-ball-select:disabled{opacity:.75;cursor:not-allowed;border-color:var(--line)}
     @media(max-width:760px){
       .forty-ball-select{
         font-size:12px;
