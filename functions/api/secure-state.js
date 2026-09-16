@@ -79,35 +79,6 @@ async function createBackup(db,reason,actor,force=false){
   return result.meta.last_row_id;
 }
 
-async function stagePressTest(db){
-  const round=4,group=1,names=GROUPS[round][group],stamp=now();
-  await createBackup(db,'Before staging Press-the-Press beta test','System',true);
-  await db.batch([
-    ...names.flatMap(player=>[9,10].map(hole=>
-      db.prepare('DELETE FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,player,hole)
-    )),
-    db.prepare('DELETE FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group)
-  ]);
-  const sideGames=await setting(db,'sideGames',{1:'None',2:'None',3:'None',4:'None'});
-  sideGames[String(round)]='Nassau 5-5-5-1-1-1';
-  await putSetting(db,'sideGames',sideGames);
-  const nassauGroups=await setting(db,'nassauGroups',{});
-  nassauGroups[String(round)]??={};
-  nassauGroups[String(round)][String(group)]='Nassau 5-5-5-1-1-1';
-  await putSetting(db,'nassauGroups',nassauGroups);
-  const nassauBets=await setting(db,'nassauBets',{});
-  nassauBets[String(round)]??={};
-  nassauBets[String(round)][String(group)]={
-    value:20,
-    presses:[{id:'beta-r4g1-press',segment:1,fromHole:8,pressedBy:'a',amount:20,parentPressId:null}]
-  };
-  await putSetting(db,'nassauBets',nassauBets);
-  const requests=await setting(db,'unlockRequests',{});
-  delete requests[round+'-'+group];
-  await putSetting(db,'unlockRequests',requests);
-  return {round,group,players:names,missingHoles:[9,10],wager:20,stagedAt:stamp};
-}
-
 async function authAction(db,body){
   const player=String(body.player||''),pin=String(body.pin||'');
   if(!PLAYERS.has(player))return json({error:'Select a golfer'},400);
@@ -206,7 +177,6 @@ async function handle(context){
     }
     if(request.method!=='POST')return json({error:'Method not allowed'},405);
     const body=await request.json();
-    if(body?.op==='stagePressTest'&&body?.stageKey==='6c2f84128747fab8e0fbda30cf57ce48265628008df95aa8')return json({ok:true,...await stagePressTest(db)});
     if(body?.op==='auth')return authAction(db,body);
     const actor=await authenticate(db,request,body);if(!actor)return json({error:'Sign in with your player PIN'},401);
     const op=String(body?.op||'');
