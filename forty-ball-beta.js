@@ -9,6 +9,12 @@
   function roundNo(){ return +(sessionStorage.r||1); }
   function groupNo(){ return +(sessionStorage.group||1); }
   function active40(r=roundNo()){ return (state.sideGames?.[r]||'None')==='40 Ball'; }
+  function commissioner(){ return currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken(); }
+  function ownGroup(r=roundNo()){
+    if(roundGroupNames(r,1).includes(currentUser()))return 1;
+    if(roundGroupNames(r,2).includes(currentUser()))return 2;
+    return null;
+  }
   function selMap(r,g){
     state.fortyBallSelections ??= {};
     state.fortyBallSelections[r] ??= {};
@@ -37,6 +43,7 @@
     const r=roundNo(), g=groupNo();
     document.querySelectorAll('.forty-ball-beta-note,.forty-ball-toggle').forEach(x=>x.remove());
     if(!active40(r))return;
+    if(!commissioner()&&ownGroup(r)&&g!==ownGroup(r))return;
 
     const pick=selMap(r,g), summary=groupSummary(r,g);
     const picker=document.querySelector('#scoreSideGame');
@@ -73,15 +80,15 @@
     const enhanced=function(){
       const r=+(sessionStorage.sideRound||sessionStorage.r||1);
       if((state.sideGames?.[r]||'None')!=='40 Ball')return original();
-      const commissioner=currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken();
+      const isComm=commissioner();
       const ownGroup=roundGroupNames(r,1).includes(currentUser())?1:roundGroupNames(r,2).includes(currentUser())?2:null;
-      const groups=commissioner?[1,2]:(ownGroup?[ownGroup]:[]);
+      const groups=isComm?[1,2]:(ownGroup?[ownGroup]:[]);
       const a=groupSummary(r,1), b=groupSummary(r,2);
       const leader=a.rel===b.rel?'Tied':(a.rel<b.rel?'First Group leads':'Second Group leads');
       const roundOpts=ROUNDS.map((x,i)=>`<option value="${i+1}" ${r===i+1?'selected':''}>${x.name}</option>`).join('');
       const panel=(x,g)=>`<section class="side-result-panel"><h3>${g===1?'First':'Second'} Group</h3><p>${x.names.map(n=>n.split(' ')[0]).join(' · ')}</p><div class="side-kpis"><div><strong>${fmtRel(x.rel)}</strong><span>Relative to Par</span></div><div><strong>${x.count}/40</strong><span>Scores Counted</span></div><div><strong>${Math.max(0,40-x.count)}</strong><span>Still to Select</span></div></div><p class="notice">Only scores explicitly marked <b>Counted</b> on the score-entry screen are included. Lower relative-to-par total wins.</p></section>`;
-      const roundControl=commissioner?`<label>Round<select id="sideRoundSel">${roundOpts}</select></label>`:`<span class="side-private-label">Your group · ${ROUNDS[r-1]?.name||'Current round'}</span>`;
-      const summary=commissioner?`<div class="side-summary"><div><b>Live Status</b><span>${leader}</span></div><div><b>Round Rule</b><span>One 40 Ball selection applies to both groups. Each group selects exactly 40 of its 72 net hole scores.</span></div></div>`:`<div class="side-summary side-private-summary"><div><b>Private group view</b><span>Only your group’s 40 Ball selections are shown.</span></div><div><b>Round Rule</b><span>Select exactly 40 of your group’s 72 net hole scores.</span></div></div>`;
+      const roundControl=isComm?`<label>Round<select id="sideRoundSel">${roundOpts}</select></label>`:`<span class="side-private-label">Your group · ${ROUNDS[r-1]?.name||'Current round'}</span>`;
+      const summary=isComm?`<div class="side-summary"><div><b>Live Status</b><span>${leader}</span></div><div><b>Round Rule</b><span>One 40 Ball selection applies to both groups. Each group selects exactly 40 of its 72 net hole scores.</span></div></div>`:`<div class="side-summary side-private-summary"><div><b>Private group view</b><span>Only your group’s 40 Ball selections are shown.</span></div><div><b>Round Rule</b><span>Select exactly 40 of your group’s 72 net hole scores.</span></div></div>`;
       return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ROUND SIDE GAME</div><h2>40 Ball — Live Scoring</h2></div>${roundControl}</div>${summary}${groups.map(g=>panel(g===1?a:b,g)).join('')}</section>`);
     };
     enhanced.__fortyBallBeta=true;
@@ -210,6 +217,8 @@
 
   const originalRender=render;
   render=function(){
+    const r=roundNo(), own=ownGroup(r);
+    if(active40(r)&&!commissioner()&&own&&groupNo()!==own){sessionStorage.group=String(own);sessionStorage.hole='1';}
     originalRender();
     injectScoreToggles();
   };
