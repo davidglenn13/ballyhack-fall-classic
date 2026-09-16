@@ -145,6 +145,25 @@ function groupProgress(round,group){
   }
   return {entered,missing:72-entered,complete:entered===72,names};
 }
+function firstMissingScore(round,group){
+  const names=roundGroupNames(round,group);
+  for(let hole=1;hole<=18;hole++)for(const name of names){
+    if(+(state.scores?.[round]?.[name]?.[hole]||0)<=0)return {name,hole};
+  }
+  return null;
+}
+function focusMissingScore(missing){
+  const input=[...document.querySelectorAll('[data-score-player]')].find(x=>
+    x.dataset.scorePlayer===missing.name&&+x.dataset.hole===missing.hole
+  );
+  if(!input)return;
+  input.classList.add('missing-score-target');
+  input.scrollIntoView({behavior:'smooth',block:'center'});
+  input.focus({preventScroll:true});
+  input.select?.();
+  const playerCard=input.closest('.score-player');
+  playerCard?.insertAdjacentHTML('afterbegin','<div class="missing-score-label">Missing score · Hole '+missing.hole+'</div>');
+}
 function syncPanel(){
   return '<div class="sync-panel"><span class="sync-dot"></span><strong data-sync-status class="sync-status '+syncTone+'">'+syncMessage+'</strong>'+
     (queue().length?'<button class="secondary small" id="retrySync">Retry now</button>':'')+'</div>';
@@ -160,6 +179,7 @@ score=function(){
     '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Foursome scorecard locked':'Review & confirm foursome')+'</h3>'+
     '<p>'+(progress.complete?'All 72 gross scores are entered. Review the card before locking it.':progress.missing+' of 72 gross scores are still missing.')+'</p></div>'+
     '<div class="review-actions">'+
+    (!isLocked&&!progress.complete?'<button class="secondary" id="findMissingScore">Find Missing Score</button>':'')+
     (!isLocked&&progress.complete&&canEdit(round,group)?'<button class="primary" id="lockGroup">Confirm & Lock</button>':'')+
     (isLocked&&currentUser()==='David Glenn'?'<button class="secondary" id="unlockGroup">Commissioner Unlock</button>':'')+
     '</div></section>';
@@ -202,6 +222,14 @@ bind=function(){
   },true));
   originalBind();
   document.querySelector('#retrySync')?.addEventListener('click',flushQueue);
+  document.querySelector('#findMissingScore')?.addEventListener('click',()=>{
+    const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
+    const missing=firstMissingScore(round,group);
+    if(!missing)return;
+    sessionStorage.hole=missing.hole;
+    render();
+    requestAnimationFrame(()=>focusMissingScore(missing));
+  });
   document.querySelector('#lockGroup')?.addEventListener('click',async()=>{
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
     if(!confirm('Confirm all scores for this foursome and lock the scorecard?'))return;
