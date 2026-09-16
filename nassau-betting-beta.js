@@ -38,7 +38,7 @@
   function pressList(r,g,si){
     const cfg=bet(r,g),seg=segmentsFor(r,g)[si];if(!seg||seg.singleHole)return '';
     const teams=nassauTeams(roundGroupNames(r,g),seg.pairing),ps=cfg.presses.filter(p=>+p.segment===si);
-    return ps.length?ps.map(p=>{const o=pressOutcome(r,g,p),who=p.pressedBy==='b'?teams[1]:teams[0];return `<div class="nb-press"><div><b>Press from hole ${p.fromHole}</b><small>${who.map(n=>n.split(' ')[0]).join('/')} pressed · ${money(p.amount)}</small></div><div><strong>${o?.status||'Pending'}</strong><small>${resultText(o,+p.amount)}</small></div><button type="button" data-nb-remove="${esc(p.id)}" data-r="${r}" data-g="${g}">×</button></div>`}).join(''):'<small class="muted">No press recorded.</small>';
+    return ps.length?ps.map(p=>{const o=pressOutcome(r,g,p),who=p.pressedBy==='b'?teams[1]:teams[0],counter=!!p.parentPressId;return `<div class="nb-press"><div><b>${counter?'Press the Press':'Press'} from hole ${p.fromHole}</b><small>${who.map(n=>n.split(' ')[0]).join('/')} ${counter?'pressed back':'pressed'} · ${money(p.amount)}</small></div><div><strong>${o?.status||'Pending'}</strong><small>${resultText(o,+p.amount)}</small></div><button type="button" data-nb-remove="${esc(p.id)}" data-r="${r}" data-g="${g}">×</button></div>`}).join(''):'<small class="muted">No press recorded.</small>';
   }
 
   function enhanceNassau(){
@@ -48,7 +48,7 @@
       const g=+panel.dataset.sideGroup,cfg=bet(r,g),names=roundGroupNames(r,g),net=groupNet(r,g),segments=segmentsFor(r,g),fmt=formatFor(r,g);
       const rule=fmt==='Nassau 6-6-6'
         ?'The wager applies to each 6-hole base match and its elected press.'
-        :'The wager applies to each 5-hole match and separately to Hole 16, Hole 17, and Hole 18. The one-hole matches cannot be pressed.';
+        :'The wager applies to each 5-hole match and separately to Hole 16, Hole 17, and Hole 18.';
       panel.insertAdjacentHTML('afterbegin',`<div class="nb-controls"><div><b>Current cash result</b><small>${names.map(n=>`${n.split(' ')[0]} ${net[n]>0?'+':''}${money(net[n])}`).join(' · ')}</small></div></div><p class="notice compact">Nassau wager: <b>${cfg.value?money(cfg.value):'not entered'}</b> · ${rule}</p>`);
       panel.querySelectorAll('.nassau-segment').forEach((segEl,si)=>{
         const seg=segments[si];if(!seg)return;const o=baseOutcome(r,g,seg),small=segEl.querySelector('small');if(small)small.insertAdjacentHTML('beforeend',`<br><b>${resultText(o,cfg.value)}</b>`);
@@ -70,6 +70,6 @@
 
   function style(){if(document.querySelector('#nb-style'))return;const s=document.createElement('style');s.id='nb-style';s.textContent=`.nb-controls{display:grid;grid-template-columns:1fr;gap:12px;align-items:end;margin-bottom:10px}.nb-controls>div{display:grid;gap:4px;padding:9px 11px;border-radius:10px;background:rgba(23,54,93,.07)}.nb-controls small{font-weight:700}.nb-box{margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}.nb-box summary{cursor:pointer;font-size:12px;font-weight:900}.nb-no-press{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.nb-press{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}.nb-press>div{display:grid;gap:2px}.nb-press small{font-size:10px;color:var(--muted)}.nb-press button{border:0;background:transparent;font-size:22px}.nb-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.nb-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.nb-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}.nb-pay span{font-size:12px;color:var(--muted)}@media(max-width:650px){.nb-net{grid-template-columns:1fr}.nb-pay{grid-template-columns:1fr auto 1fr}.nb-pay strong{grid-column:1/-1;text-align:right}}`;document.head.appendChild(s)}
 
-  document.addEventListener('click',e=>{const d=e.target.closest?.('[data-nb-remove]');if(!d)return;const r=+d.dataset.r,g=+d.dataset.g;bet(r,g).presses=bet(r,g).presses.filter(p=>p.id!==d.dataset.nbRemove);persist(r,g).then(()=>render());});
+  document.addEventListener('click',e=>{const d=e.target.closest?.('[data-nb-remove]');if(!d)return;const r=+d.dataset.r,g=+d.dataset.g,id=d.dataset.nbRemove;bet(r,g).presses=bet(r,g).presses.filter(p=>p.id!==id&&String(p.parentPressId||'')!==id);persist(r,g).then(()=>render());});
   style();const prior=render;render=function(){prior();setTimeout(()=>{enhanceNassau();enhanceSettlement()},0)};setTimeout(()=>{enhanceNassau();enhanceSettlement()},0);
 })();

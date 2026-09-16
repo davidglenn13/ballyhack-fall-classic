@@ -136,7 +136,7 @@ async function baseOperation(db,body){
   }else if(op==='nassauBetConfig'){
     const round=Number(body.round),group=Number(body.group);if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid Nassau bet group'},400);
     const raw=body.config||{},value=Math.max(0,Math.min(10000,Number(raw.value||0)));
-    const presses=(Array.isArray(raw.presses)?raw.presses:[]).slice(0,40).map((p,i)=>({id:String(p.id||`p${Date.now()}${i}`).slice(0,80),segment:Math.max(0,Math.min(3,Number(p.segment)||0)),fromHole:Math.max(1,Math.min(18,Number(p.fromHole)||1)),pressedBy:p.pressedBy==='b'?'b':'a',amount:Math.max(0,Math.min(10000,Number(p.amount||0)))}));
+    const presses=(Array.isArray(raw.presses)?raw.presses:[]).slice(0,40).map((p,i)=>({id:String(p.id||`p${Date.now()}${i}`).slice(0,80),segment:Math.max(0,Math.min(3,Number(p.segment)||0)),fromHole:Math.max(1,Math.min(18,Number(p.fromHole)||1)),pressedBy:p.pressedBy==='b'?'b':'a',amount:Math.max(0,Math.min(10000,Number(p.amount||0))),parentPressId:p.parentPressId?String(p.parentPressId).slice(0,80):null}));
     const current=await setting(db,'nassauBets',{});current[String(round)]??={};current[String(round)][String(group)]={value,presses};await putSetting(db,'nassauBets',current);
   }else if(op==='fortyBallSelection'){
     const round=Number(body.round),group=Number(body.group),hole=Number(body.hole);if(!(round>=1&&round<=4&&group>=1&&group<=2&&hole>=1&&hole<=18&&PLAYERS.has(body.player)))return json({error:'Invalid 40 Ball selection'},400);

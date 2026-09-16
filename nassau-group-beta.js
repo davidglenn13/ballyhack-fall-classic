@@ -168,7 +168,7 @@
       const cfg=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0,presses:[]};
       const value=Math.max(0,Number(cfg.value||0));
       const presses=Array.isArray(cfg.presses)?cfg.presses:[];
-      const pressAmounts=presses.length?presses.map((p,i)=>`Press ${i+1}: ${money(p.amount)}`).join(' · '):'No presses';
+      const pressAmounts=presses.length?presses.map((p,i)=>`${p.parentPressId?'Press the Press':`Press ${presses.slice(0,i).filter(x=>!x.parentPressId).length+1}`}: ${money(p.amount)}`).join(' · '):'No presses';
       const segs=segmentsFor(r,g).map(seg=>`${seg.label}: ${nassauSegment(r,g,seg).status}`).join(' · ');
       return `<div class="saved-side-entry"><b>${esc(ROUNDS[r-1].name)} · ${g===1?'First':'Second'} Group · ${esc(fmt)}</b><span><strong>Wager:</strong> ${value?`${money(value)} per match`:'Not entered'} · ${esc(pressAmounts)}</span><span>${esc(firstNames(r,g))}</span><span>${esc(segs)}</span></div>`;
     }).join('');
