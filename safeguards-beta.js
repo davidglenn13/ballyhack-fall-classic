@@ -193,6 +193,16 @@ function firstMissingScore(round,group){
   }
   return null;
 }
+function setScoreLanding(player){
+  const round=defaultRoundForToday();
+  const group=roundGroupNames(round,1).includes(player)?1:2;
+  const missing=firstMissingScore(round,group);
+  sessionStorage.r=String(round);
+  sessionStorage.group=String(group);
+  sessionStorage.hole=String(missing?.hole||18);
+  sessionStorage.scoreRoundDate=easternDateKey();
+  tab='Score';
+}
 function focusMissingScore(missing){
   const input=[...document.querySelectorAll('[data-score-player]')].find(x=>
     x.dataset.scorePlayer===missing.name&&+x.dataset.hole===missing.hole
@@ -405,6 +415,7 @@ identityGate=function(){
     overlay.remove();
     await markAccess();
     await loadShared();
+    setScoreLanding(player);
     render();
   };
 };
