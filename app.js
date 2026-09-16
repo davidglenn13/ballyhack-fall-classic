@@ -545,7 +545,7 @@ function initNav(){
   let n=document.querySelector('#nav');
 
   n.innerHTML=tabs
-    .map(t=>`<button data-tab="${t}">${t}</button>`)
+    .map(t=>`<button data-tab="${t}">${t==='Score'?'Enter Score':t}</button>`)
     .join('');
 
   n.onclick=e=>{
