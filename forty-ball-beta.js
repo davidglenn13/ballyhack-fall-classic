@@ -43,8 +43,8 @@
     if(picker){
       picker.value='40 Ball';
       const note=document.createElement('div');
-      note.className='forty-ball-beta-note callout compact';
-      note.innerHTML=`<b>40 Ball Tracker:</b> ${summary.count}/40 · ${fmtRel(summary.rel)}`;
+      note.className='forty-ball-beta-note';
+      note.innerHTML=`<div class="forty-tracker-title">40 Ball Tracker</div><div class="forty-tracker-stats"><div><strong>${summary.count}/40</strong><span>Scores</span></div><div><strong>${fmtRel(summary.rel)}</strong><span>Relative to Par</span></div></div>`;
       picker.closest('.side-game-picker')?.insertAdjacentElement('afterend',note);
     }
 
@@ -103,7 +103,7 @@
     const note=document.querySelector('.forty-ball-beta-note');
     if(note){
       const s=groupSummary(r,g);
-      note.innerHTML=`<b>40 Ball Tracker:</b> ${s.count}/40 · ${fmtRel(s.rel)}`;
+      note.innerHTML=`<div class="forty-tracker-title">40 Ball Tracker</div><div class="forty-tracker-stats"><div><strong>${s.count}/40</strong><span>Scores</span></div><div><strong>${fmtRel(s.rel)}</strong><span>Relative to Par</span></div></div>`;
     }
 
     await persist(r,g,n,h,next);
@@ -111,6 +111,12 @@
 
   const style=document.createElement('style');
   style.textContent=`
+    .forty-ball-beta-note{grid-column:span 12;width:100%;margin:16px 0 0;padding:16px 18px;border:1px solid rgba(23,54,93,.16);border-left:6px solid var(--red);border-radius:14px;background:linear-gradient(135deg,#fff7f7,#fff);box-shadow:0 5px 16px rgba(23,54,93,.07);color:var(--navy)}
+    .forty-tracker-title{font-size:14px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+    .forty-tracker-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .forty-tracker-stats>div{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    .forty-tracker-stats strong{font-size:22px;line-height:1;color:var(--navy)}
+    .forty-tracker-stats span{font-size:11px;font-weight:800;color:var(--muted);text-align:right}
     .forty-ball-toggle{margin-top:8px}
     .forty-ball-select{
       width:100%;
@@ -149,6 +155,11 @@
     }
     .forty-ball-select:disabled{opacity:.75;cursor:not-allowed;border-color:var(--line)}
     @media(max-width:760px){
+      .forty-ball-beta-note{padding:14px;margin-top:14px}
+      .forty-tracker-stats{gap:8px}
+      .forty-tracker-stats>div{display:grid;gap:4px;padding:10px}
+      .forty-tracker-stats strong{font-size:20px}
+      .forty-tracker-stats span{text-align:left;font-size:10px}
       .forty-ball-select{
         font-size:12px;
         line-height:1.15;
