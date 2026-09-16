@@ -80,6 +80,10 @@ function currentUser(){
   return sessionStorage.getItem('ballyhack-current-player')||''
 }
 
+function sideGameWasSelected(round,group){
+  return sessionStorage.getItem('ballyhack-side-selected-'+round+'-'+group)==='1';
+}
+
 async function markAccess(){
   const n=currentUser();
   if(n)await apiPost({op:'access',player:n})
@@ -685,7 +689,7 @@ function score(){
   }).join('');
 
   return layout(`
-    <section class="card scoring-card ${sideGame==='None'?'score-setup-required':'score-active'}">
+    <section class="card scoring-card ${sideGame==='None'||!sideGameWasSelected(r,group)?'score-setup-required':'score-active'}">
 
       <div class="scoring-head">
         <div>
@@ -882,7 +886,8 @@ function board(){
 
       <div class="callout">
         <b>Stableford points:</b>
-        5 = 3 or more under net par · 4 = 2 under · 3 = 1 under · 2 = net par · 1 = 1 over · 0 = 2 or more over.<br>
+        5 = 3 or more under net par · 4 = 2 under · 3 = 1 under · 2 = net par · 1 = 1 over · 0 = 2 or more over.
+        <br>
       </div>
 
       <div class="table-wrap">
@@ -1360,6 +1365,16 @@ function bind(){
       let r=+(sessionStorage.r||1);
 
       state.sideGames[r]=e.target.value;
+      if(e.target.value==='None'){
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+sessionStorage.group);
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
+      }else if(e.target.value==='40 Ball'){
+        sessionStorage.setItem('ballyhack-side-selected-'+r+'-1','1');
+        sessionStorage.setItem('ballyhack-side-selected-'+r+'-2','1');
+      }else{
+        sessionStorage.setItem('ballyhack-side-selected-'+r+'-'+sessionStorage.group,'1');
+      }
       save();
 
       apiPost({
