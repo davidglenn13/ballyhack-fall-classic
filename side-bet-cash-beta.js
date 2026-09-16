@@ -104,7 +104,7 @@
     if(!fortyActive(r))return;
     const picker=document.querySelector('.side-game-picker'),sel=document.querySelector('#scoreSideGame');
     if(!picker||!sel||picker.querySelector('.fbw-wager'))return;
-    const host=sel.closest('div')||picker,v=wager(r);
+    const host=sel.closest('div')||picker,v=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?wager(r):0;
     if(g===1){
       host.insertAdjacentHTML('beforeend',`<label class="fbw-wager ${v?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-fbw-wager data-r="${r}" value="${v||''}" aria-label="40 Ball wager amount"></span></label>`);
     }else{
