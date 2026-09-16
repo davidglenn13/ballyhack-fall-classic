@@ -59,7 +59,7 @@
     c.presses=c.presses.filter(p=>{
       if(!p.parentPressId)return true;
       const parent=originals.get(String(p.parentPressId));
-      return !!parent&&+p.segment===+parent.segment&&p.pressedBy!==parent.pressedBy&&+p.fromHole>+parent.fromHole;
+      return !!parent&&+p.segment===+parent.segment&&p.pressedBy!==parent.pressedBy&&+p.fromHole>=+parent.fromHole;
     });
     if(c.presses.length!==before){ persist(r,g).catch(()=>{}); return true; }
     return false;
@@ -102,7 +102,7 @@
       cards.push(wagerCard('PRESS',activePress,activePress.pressedBy,activeStanding));
       if(counterPress){
         cards.push(wagerCard('PRESS THE PRESS',counterPress,counterPress.pressedBy,pressStanding(r,g,seg,counterPress)));
-      }else if(nextHole!==null&&nextHole>+activePress.fromHole){
+      }else if(nextHole!==null&&nextHole>=+activePress.fromHole){
         cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS THE PRESS</span><h3>${shortTeam(counterTeam)}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>New bet starts</span><b>Hole ${nextHole}</b></div><div class="nlp-side"><span>Remaining holes</span><b>${seg.holes.filter(x=>x>=nextHole).length}</b></div><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press the Press</button></div>`);
       }
     }else if(nextHole!==null&&nextHole!==firstHole){
@@ -129,7 +129,7 @@
     const original=originalPressInSegment(c,si),counter=counterPressFor(c,original);
     if(original){
       if(counter){alert('The original press has already been pressed back.');render();return;}
-      if(h<=+original.fromHole){alert(`Press the Press becomes available after Hole ${original.fromHole} is completed.`);render();return;}
+      if(h<+original.fromHole){alert(`Press the Press can start on Hole ${original.fromHole} or a later unplayed hole.`);render();return;}
       if(h!==nextHole){alert(`Press the Press can only start on the next unplayed hole, Hole ${nextHole}.`);render();return;}
       const amount=Math.min(999,Math.max(0,+c.value||0));if(!amount){alert('Enter the Nassau wager amount first.');return;}
       c.presses.push({id:`p${Date.now()}${Math.random().toString(36).slice(2,6)}`,segment:si,fromHole:h,pressedBy:original.pressedBy==='a'?'b':'a',amount,parentPressId:original.id});persist(r,g).then(()=>render());return;
