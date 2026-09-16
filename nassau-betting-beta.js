@@ -53,7 +53,7 @@
       panel.querySelectorAll('.nassau-segment').forEach((segEl,si)=>{
         const seg=segments[si];if(!seg)return;const o=baseOutcome(r,g,seg),small=segEl.querySelector('small');if(small)small.insertAdjacentHTML('beforeend',`<br><b>${resultText(o,cfg.value)}</b>`);
         if(!seg.singleHole){
-          segEl.insertAdjacentHTML('beforeend',`<details class="nb-box"><summary>Press bet (${cfg.presses.filter(p=>+p.segment===si).length})</summary>${pressList(r,g,si)}</details>`);
+          segEl.insertAdjacentHTML('beforeend',`<details class="nb-box"><summary>Press Bet (${cfg.presses.filter(p=>+p.segment===si).length})</summary>${pressList(r,g,si)}</details>`);
         }
       });
     });

@@ -219,7 +219,7 @@ function focusMissingScore(missing){
 }
 function syncPanel(){
   return '<div class="sync-panel"><span class="sync-dot"></span><strong data-sync-status class="sync-status '+syncTone+'">'+syncMessage+'</strong>'+
-    (queue().length?'<button class="secondary small" id="retrySync">Retry now</button>':'')+'</div>';
+    (queue().length?'<button class="secondary small" id="retrySync">Retry Now</button>':'')+'</div>';
 }
 function commissionerUnlockPanel(){
   if(currentUser()!=='David Glenn')return '';
@@ -230,7 +230,7 @@ function commissionerUnlockPanel(){
   }
   const requests=Object.values(state.unlockRequests||{});
   if(!requests.length)return '';
-  return '<section class="unlock-request-panel"><div class="eyebrow">UNLOCK REQUESTS</div><h3>Scorecard correction requested</h3>'+requests.map(request=>
+  return '<section class="unlock-request-panel"><div class="eyebrow">UNLOCK REQUESTS</div><h3>Scorecard Correction Requested</h3>'+requests.map(request=>
     '<div class="unlock-request-row"><span><b>Round '+request.round+' · Group '+request.group+'</b><small>'+roundGroupNames(+request.round,+request.group).join(', ')+'</small><small>Requested by '+request.requestedBy+(request.requestedAt?' · '+new Date(request.requestedAt).toLocaleString():'')+'</small></span><button class="primary small" data-approve-unlock="'+request.round+'-'+request.group+'">Unlock Scorecard</button></div>'
   ).join('')+'</section>';
 }
@@ -244,7 +244,7 @@ score=function(){
   const mayRequest=isLocked&&currentUser()!=='David Glenn'&&canEdit(round,group);
   let html=originalScore();
   const review='<section class="score-review '+(isLocked?'locked':'')+'">'+
-    '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Scorecard Locked':'Review & confirm foursome')+'</h3>'+
+    '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Scorecard Locked':'Review & Confirm Foursome')+'</h3>'+
     (!isLocked?'<p>'+(progress.complete?'All 72 gross scores are entered. Review the card before locking it.':progress.missing+' of 72 gross scores are still missing.')+'</p>':(unlockRequest?'<p>Unlock requested by '+unlockRequest.requestedBy+'.</p>':''))+'</div>'+
     '<div class="review-actions">'+
     (!isLocked&&!progress.complete?'<button class="secondary" id="findMissingScore">Find Missing Score</button>':'')+
@@ -277,14 +277,14 @@ admin=function(){
     '<button class="secondary" id="exportCsv">Download Scores CSV</button>'+
     '<button class="secondary" id="exportJson">Download Full Backup</button>'+
     '<button class="secondary" id="changePlayer">Change Player / PIN</button></div>'+
-    '<div class="pin-reset"><label><b>Commissioner PIN recovery</b><select id="resetPinPlayer"><option value="">Select golfer</option>'+
+    '<div class="pin-reset"><label><b>Commissioner PIN Recovery</b><select id="resetPinPlayer"><option value="">Select golfer</option>'+
     PLAYERS.filter(p=>p.name!=='David Glenn').map(p=>'<option>'+p.name+'</option>').join('')+
-    '</select></label><button class="secondary" id="resetPlayerPin">Reset selected PIN</button></div>'+
+    '</select></label><button class="secondary" id="resetPlayerPin">Reset Selected PIN</button></div>'+
     '<p class="notice">Automatic checkpoints are saved during scoring and whenever a foursome is locked. Latest backup: '+
     (state.latestBackup?new Date(state.latestBackup.created_at).toLocaleString():'not created yet')+'.</p></section>'+
-    '<section class="card"><h2>Score Change History</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Changed by</th><th>Score</th><th>Change</th><th>Action</th></tr></thead><tbody>'+
+    '<section class="card"><h2>Score Change History</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Changed By</th><th>Score</th><th>Change</th><th>Action</th></tr></thead><tbody>'+
     auditRows+'</tbody></table></div></section>';
-  const activityPanel='<section class="card"><h2>Tester Activity</h2><p class="muted">Commissioner only. PIN creation is shown separately from sign-ins and changes. Events begin when this feature is published.</p><div class="table-wrap"><table><thead><tr><th>Golfer</th><th>PIN created</th><th>Last sign-in</th><th>Last change</th></tr></thead><tbody>'+testerRows+'</tbody></table></div><h3>Recent events</h3><div class="table-wrap"><table><thead><tr><th>Time</th><th>Golfer</th><th>Action</th><th>Details</th></tr></thead><tbody>'+eventRows+'</tbody></table></div></section>';
+  const activityPanel='<section class="card"><h2>Tester Activity</h2><p class="muted">Commissioner only. PIN creation is shown separately from sign-ins and changes. Events begin when this feature is published.</p><div class="table-wrap"><table><thead><tr><th>Golfer</th><th>PIN Created</th><th>Last Sign-In</th><th>Last Change</th></tr></thead><tbody>'+testerRows+'</tbody></table></div><h3>Recent Events</h3><div class="table-wrap"><table><thead><tr><th>Time</th><th>Golfer</th><th>Action</th><th>Details</th></tr></thead><tbody>'+eventRows+'</tbody></table></div></section>';
   return layout(activityPanel)+html+layout(integrity);
 };
 

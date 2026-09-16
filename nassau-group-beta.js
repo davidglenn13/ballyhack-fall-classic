@@ -195,7 +195,7 @@
       const formats=[...new Set(groups.map(g=>formatFor(r,g)))];
       const title=formats.length===1?formats[0]:'Nassau Side Games';
       const active=groups.map(g=>nassauPanel(r,g)).join('');
-      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. 5-5-5-1-1-1 uses three 5-hole matches plus three separate one-hole matches on 16–18; 6-6-6 uses three 6-hole matches.</span></div></div>${active}${savedResults(r)}</section>`);
+      return layout(`<section class="card"><div class="side-head"><div><div class="eyebrow">ACTIVE SIDE GAME</div><h2>${esc(title)}</h2></div><label>Round<select id="sideRoundSel">${roundOpts}</select></label></div><div class="side-summary"><div><b>Active Groups</b><span>${groups.map(g=>g===1?'First Group':'Second Group').join(' · ')}</span></div><div><b>Rule</b><span>Nassau is optional by foursome. 5-5-5-1-1-1 uses three 5-hole matches plus three separate one-hole matches on 16–18; 6-6-6 uses three 6-hole matches.</span></div></div>${active}${savedResults(r)}</section>`);
     };
     enhanced.__nassauGroupBeta=true;
     sideGameResults=enhanced;

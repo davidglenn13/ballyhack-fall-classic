@@ -693,7 +693,7 @@ function score(){
             PRIMARY TOURNAMENT WORKFLOW
           </div>
 
-          <h2>Enter Scores</h2>
+          <h2>Enter Score</h2>
 
         </div>
 
@@ -919,7 +919,7 @@ function cottage(){
   return layout(`
     <section class="card">
       <div class="eyebrow">TEAM COMPETITION</div>
-      <h2 class="red">COTTAGE CUP</h2>
+      <h2 class="red">Cottage Cup</h2>
       <p>Track the team race between Cottage 1 and Cottage 2.</p>
     </section>
 
@@ -984,26 +984,26 @@ function chase(){
 
   const leader=n?chaseTotal(L[0],n):0;
 
-  let stageTitle='CHASE FOR THE CUP — READY';
+  let stageTitle='Chase for the Cup — Ready';
   let stageCopy='Progress will appear here after Round 1 and update after every championship round.';
 
   if(n===1){
-    stageTitle='CHASE FOR THE CUP — AFTER ROUND 1';
+    stageTitle='Chase for the Cup — After Round 1';
     stageCopy='Opening standings show each golfer’s Round 1 points, current position, and points behind the leader.';
   }
 
   if(n===2){
-    stageTitle='CHASE FOR THE CUP — AFTER ROUND 2';
+    stageTitle='Chase for the Cup — After Round 2';
     stageCopy='Standings update with the two-round cumulative total, position in the race, and points behind the leader.';
   }
 
   if(n===3){
-    stageTitle='CHASE FOR THE CUP — FINAL ROUND';
+    stageTitle='Chase for the Cup — Final Round';
     stageCopy='After Round 3, the dashboard adds the vulnerable round plus Friday targets and Path to the Podium for 1st, 2nd, and 3rd.';
   }
 
   if(n===4){
-    stageTitle='CHASE FOR THE CUP — FINAL RESULTS';
+    stageTitle='Chase for the Cup — Final Results';
     stageCopy='Final standings use each golfer’s best three of four Stableford rounds. The lowest round is dropped automatically.';
   }
 
@@ -1226,10 +1226,10 @@ function settlement(){
           <thead>
             <tr>
               <th>Golfer</th>
-              <th>Trip charges</th>
+              <th>Trip Charges</th>
               <th>Entry</th>
               <th>Credits</th>
-              <th>Final owed</th>
+              <th>Final Owed</th>
             </tr>
           </thead>
 
@@ -1592,7 +1592,7 @@ function identityGate(){
       >
 
       <h2>
-        Who is using this phone?
+        Who Is Using This Phone?
       </h2>
 
       <p>

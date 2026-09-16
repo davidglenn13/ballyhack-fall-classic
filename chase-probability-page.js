@@ -6,7 +6,7 @@
     const forecast=`
       <section class="card">
         <div class="eyebrow">TOURNAMENT OUTLOOK</div>
-        <h2 class="red">CHASE FOR THE CUP — FORECAST</h2>
+        <h2 class="red">Chase for the Cup — Forecast</h2>
         <p>See each golfer’s current chance to win or finish in the money. The forecast updates automatically as scores are entered.</p>
       </section>
     `;
