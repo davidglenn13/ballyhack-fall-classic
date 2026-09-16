@@ -922,7 +922,7 @@ function cottage(){
     <section class="card">
       <div class="eyebrow">TEAM COMPETITION</div>
       <h2 class="red">COTTAGE CUP</h2>
-      <p>Track the team race between Cottage 1 and Cottage 2. Live totals and each cottage’s chance to win update automatically as tournament scores are entered.</p>
+      <p>Track the team race between Cottage 1 and Cottage 2.</p>
     </section>
 
     <section class="card half">
