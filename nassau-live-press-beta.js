@@ -120,7 +120,7 @@
   }
 
   document.addEventListener('input',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;w.value=w.value.replace(/\D/g,'').slice(0,4);const c=cfg(+w.dataset.r,+w.dataset.g);c.value=+w.value||0;w.closest('.nlp-wager')?.classList.toggle('needs-wager',!c.value);save();const card=document.querySelector('.nlp-card');card?.querySelectorAll('[data-nlp-add]').forEach(b=>b.disabled=!c.value);card?.querySelectorAll('[data-nlp-base]').forEach(el=>el.textContent=`Wager: ${c.value?'$'+c.value:'not entered'}`);const hint=card?.querySelector('[data-nlp-hint]');if(hint)hint.hidden=!!c.value;});
-  document.addEventListener('change',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;persist(+w.dataset.r,+w.dataset.g).catch(()=>{});});
+  document.addEventListener('change',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;const r=+w.dataset.r,g=+w.dataset.g,c=cfg(r,g);if(typeof sideGameWasSelected==='function'){const key='ballyhack-side-selected-'+r+'-'+g;if(c.value)sessionStorage.setItem(key,'1');else sessionStorage.removeItem(key);}persist(r,g).then(()=>render()).catch(()=>{});});
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-nlp-add]');if(!b)return;
     const r=+b.dataset.r,g=+b.dataset.g,si=+b.dataset.si,h=+b.dataset.hole,c=cfg(r,g),segments=segmentsFor(r,g),seg=segments[si];if(!seg)return;
