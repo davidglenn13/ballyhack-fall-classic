@@ -9,6 +9,7 @@ function database(){
   const sqlite=new DatabaseSync(':memory:');
   sqlite.exec(readFileSync(new URL('../cloudflare/migrations/0001_initial.sql',import.meta.url),'utf8'));
   sqlite.exec(readFileSync(new URL('../cloudflare/migrations/0002_activity.sql',import.meta.url),'utf8'));
+  sqlite.exec(readFileSync(new URL('../cloudflare/migrations/0003_login_throttle.sql',import.meta.url),'utf8'));
   const db={
     prepare(sql){const statement=sqlite.prepare(sql);let args=[];return {
       bind(...values){args=values;return this},
@@ -29,7 +30,7 @@ function session(){
     return {status:response.status,body:await response.json()};
   };
   return {
-    sqlite,send,
+    db,sqlite,send,
     async login(player){const x=await send('POST',player,{op:'auth',player,pin:'1234'});assert.equal(x.status,200,x.body.error);tokens[player]=x.body.token},
     async get(player){const x=await send('GET',player);assert.equal(x.status,200,x.body.error);return x.body},
     async post(player,body){
@@ -106,6 +107,65 @@ test('Complete Nassau match keeps separate presses through lock, unlock, and cor
   assert.equal(state.nassauBets[1][1].presses.length,2);
   assert.equal(state.scores[1]['David Glenn'][18],'4');
   assert.equal(state.audit[0].old_gross,5);
+});
+
+test('A golfer requests an unlock and only the commissioner can approve it',async()=>{
+  const x=session();
+  for(const player of ['David Glenn','Nick Condeni','Joe Phelan'])await x.login(player);
+  for(const player of GROUPS[1][1])for(let hole=1;hole<=18;hole++){
+    const result=await x.post('Nick Condeni',{op:'score',round:1,player,hole,gross:5,expectedGross:0,mutationId:`card-${player}-${hole}`});
+    assert.equal(result.status,200,result.body.error);
+  }
+  assert.equal((await x.post('Nick Condeni',{op:'lockGroup',round:1,group:1})).status,200);
+  assert.equal((await x.post('Joe Phelan',{op:'requestUnlock',round:1,group:1})).status,403);
+  assert.equal((await x.post('Nick Condeni',{op:'requestUnlock',round:1,group:1})).status,200);
+  assert.equal((await x.get('Nick Condeni')).unlockRequests['1-1'].requestedBy,'Nick Condeni');
+  assert.equal((await x.post('Nick Condeni',{op:'unlockGroup',round:1,group:1})).status,403);
+  assert.equal((await x.post('David Glenn',{op:'unlockGroup',round:1,group:1})).status,200);
+  assert.equal((await x.get('Nick Condeni')).unlockRequests['1-1'],undefined);
+  assert.equal((await x.post('Nick Condeni',{op:'score',round:1,player:'Nick Condeni',hole:18,gross:4,expectedGross:5,mutationId:'after-unlock'})).status,200);
+});
+
+test('Incorrect PINs trigger escalating per-golfer waits and a successful login resets the count',async()=>{
+  const x=session();await x.login('David Glenn');await x.login('Nick Condeni');
+  for(let attempt=1;attempt<=4;attempt++){
+    assert.equal((await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'9999'})).status,401);
+  }
+  const fifth=await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'9999'});
+  assert.equal(fifth.status,429);
+  assert.equal(fifth.body.retryAfterSeconds,60);
+  assert.equal((await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'1234'})).status,429);
+  assert.equal((await x.send('POST','David Glenn',{op:'auth',player:'David Glenn',pin:'1234'})).status,200);
+  x.sqlite.prepare('UPDATE tournament_login_attempts SET locked_until=0 WHERE player=?').run('Nick Condeni');
+  const sixth=await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'9999'});
+  assert.equal(sixth.status,429);
+  assert.equal(sixth.body.retryAfterSeconds,300);
+  x.sqlite.prepare('UPDATE tournament_login_attempts SET locked_until=0 WHERE player=?').run('Nick Condeni');
+  const seventh=await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'9999'});
+  assert.equal(seventh.status,429);
+  assert.equal(seventh.body.retryAfterSeconds,900);
+  x.sqlite.prepare('UPDATE tournament_login_attempts SET locked_until=0 WHERE player=?').run('Nick Condeni');
+  assert.equal((await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'1234'})).status,200);
+  assert.equal(x.sqlite.prepare('SELECT failed_count FROM tournament_login_attempts WHERE player=?').get('Nick Condeni'),undefined);
+  assert.equal((await x.send('POST','Nick Condeni',{op:'auth',player:'Nick Condeni',pin:'9999'})).status,401);
+  assert.equal(x.sqlite.prepare('SELECT failed_count FROM tournament_login_attempts WHERE player=?').get('Nick Condeni').failed_count,1);
+});
+
+test('Signing in again keeps an existing device session valid',async()=>{
+  const x=session();
+  const first=await x.send('POST','David Glenn',{op:'auth',player:'David Glenn',pin:'1234'});
+  const second=await x.send('POST','David Glenn',{op:'auth',player:'David Glenn',pin:'1234'});
+  assert.equal(first.status,200);
+  assert.equal(second.status,200);
+  assert.notEqual(first.body.token,second.body.token);
+  for(const token of [first.body.token,second.body.token]){
+    const request=new Request('https://beta.example/api/secure-state',{
+      headers:{'x-ballyhack-player':'David Glenn','x-ballyhack-token':token}
+    });
+    const response=await onRequestGet({request,env:{DB:x.db}});
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).safeguards.role,'admin');
+  }
 });
 
 test('Commissioner restore recovers state atomically and rejects old offline edits',async()=>{
