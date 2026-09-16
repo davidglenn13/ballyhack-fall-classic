@@ -21,6 +21,29 @@ const originalBind=bind;
 const originalRender=render;
 
 function authToken(){return localStorage.getItem(TOKEN_KEY)||''}
+function switchPlayer(){
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('ballyhack-current-player');
+  location.reload();
+}
+function updateSyncIdentity(){
+  const user=currentUser();
+  if(!user||!authToken())return;
+  document.querySelectorAll('.sync-panel').forEach(panel=>{
+    const identity=document.createElement('span');
+    identity.className='sync-identity';
+    identity.append('Signed in as ');
+    const name=document.createElement('button');
+    name.type='button';
+    name.className='sync-player-link';
+    name.textContent=user;
+    name.setAttribute('aria-label','Change player, currently signed in as '+user);
+    name.addEventListener('click',switchPlayer);
+    identity.append(name);
+    if(user==='David Glenn')identity.append(' · Commissioner');
+    panel.append(identity);
+  });
+}
 function mutationId(){
   return globalThis.crypto?.randomUUID?.()||
     Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
@@ -299,14 +322,13 @@ bind=function(){
     if(result)alert(player+' can now create a new PIN.');
   });
   document.querySelector('#changePlayer')?.addEventListener('click',()=>{
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem('ballyhack-current-player');
-    location.reload();
+    switchPlayer();
   });
 };
 
 render=function(){
   originalRender();
+  updateSyncIdentity();
   if(tab==='Score'){
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
     const disabled=locked(round,group)||!canEdit(round,group)||!authToken();
@@ -352,7 +374,7 @@ identityGate=function(){
   const overlay=document.createElement('div');
   overlay.className='identity-overlay';
   overlay.innerHTML='<div class="identity-card"><img src="assets/ballyhack-logo.png" alt="Ballyhack">'+
-    '<h2>Golfer Sign In</h2><p>Select your name and enter your private four-digit PIN. On your first visit, the PIN you choose becomes your PIN.</p>'+
+    '<h2>Golfer Sign In</h2><p>Select your name and enter your private four-digit PIN. If you are returning to David Glenn, select David and enter the same PIN you used before. A new golfer chooses a PIN on their first visit.</p>'+
     '<select id="identitySelect"><option value="">Select golfer</option>'+PLAYERS.map(p=>'<option>'+p.name+'</option>').join('')+'</select>'+
     '<input id="identityPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="4-digit PIN">'+
     '<p class="login-error" id="loginError"></p><button type="button" class="primary" id="identitySave">Continue</button></div>';
