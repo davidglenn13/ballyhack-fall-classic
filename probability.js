@@ -140,7 +140,7 @@
     try{
       ensureStyles();
       const model=compute();
-      const chaseHeading=[...app.querySelectorAll('h2')].find(x=>x.textContent.trim().startsWith('CHASE FOR THE CUP'));
+      const chaseHeading=[...app.querySelectorAll('h2')].find(x=>/^Chase for the Cup/i.test(x.textContent.trim()));
       if(chaseHeading && !app.querySelector('[data-win-prob="individual"]')){
         const card=chaseHeading.closest('.card');
         if(card)card.insertAdjacentHTML('beforeend',individualPanel(model));
