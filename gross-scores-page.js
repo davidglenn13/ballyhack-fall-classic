@@ -62,7 +62,6 @@
   function grossPage(){
     return layout(`
       <section class="card gross-page-card">
-        <div class="eyebrow">OFFICIAL GROSS SCORES</div>
         <h2>Gross Scores</h2>
         ${summaryTable()}
         <div id="grossDetailMount"></div>
