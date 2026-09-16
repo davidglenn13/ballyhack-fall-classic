@@ -285,7 +285,7 @@ admin=function(){
     '<section class="card"><h2>Score Change History</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Changed by</th><th>Score</th><th>Change</th><th>Action</th></tr></thead><tbody>'+
     auditRows+'</tbody></table></div></section>';
   const activityPanel='<section class="card"><h2>Tester Activity</h2><p class="muted">Commissioner only. PIN creation is shown separately from sign-ins and changes. Events begin when this feature is published.</p><div class="table-wrap"><table><thead><tr><th>Golfer</th><th>PIN created</th><th>Last sign-in</th><th>Last change</th></tr></thead><tbody>'+testerRows+'</tbody></table></div><h3>Recent events</h3><div class="table-wrap"><table><thead><tr><th>Time</th><th>Golfer</th><th>Action</th><th>Details</th></tr></thead><tbody>'+eventRows+'</tbody></table></div></section>';
-  return html+layout(activityPanel+integrity);
+  return layout(activityPanel)+html+layout(integrity);
 };
 
 bind=function(){
@@ -355,6 +355,18 @@ bind=function(){
 };
 
 render=function(){
+  const nav=document.querySelector('#nav');
+  const commissioner=currentUser()==='David Glenn'&&!!authToken();
+  let commissionerTab=nav?.querySelector('button[data-tab="More"]');
+  if(commissioner&&!commissionerTab){
+    commissionerTab=document.createElement('button');
+    commissionerTab.dataset.tab='More';
+    commissionerTab.textContent='Commissioner';
+    nav.appendChild(commissionerTab);
+  }else if(!commissioner){
+    commissionerTab?.remove();
+    if(tab==='More')tab='Score';
+  }
   originalRender();
   updateHeaderIdentity();
   if(tab==='Score'){

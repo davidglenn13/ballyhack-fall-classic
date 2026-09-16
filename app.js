@@ -1338,7 +1338,7 @@ function render(){
     'Standings & Forecast':board,
     'Cottage Cup':cottage,
     'Side Games':sideGameResults,
-    'More':more
+    'More':admin
   }[tab]||score;
 
   document.querySelector('#app').innerHTML=fn();
