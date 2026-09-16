@@ -2,6 +2,8 @@
 const SECURE_API='/api/secure-state';
 const TOKEN_KEY='ballyhack-auth-token';
 const PLAYER_KEY='ballyhack-current-player';
+const REMEMBERED_TOKEN_KEY='ballyhack-remembered-token';
+const REMEMBERED_PLAYER_KEY='ballyhack-remembered-player';
 const QUEUE_KEY='ballyhack-sync-queue-v1';
 
 // Carry a previous browser-wide sign-in into this tab once, then stop sharing it.
@@ -11,10 +13,29 @@ if(legacyPlayer&&legacyToken&&!sessionStorage.getItem(TOKEN_KEY)){
   sessionStorage.setItem(PLAYER_KEY,legacyPlayer);
   sessionStorage.setItem(TOKEN_KEY,legacyToken);
 }
+if(legacyPlayer&&legacyToken&&!localStorage.getItem(REMEMBERED_TOKEN_KEY)){
+  localStorage.setItem(REMEMBERED_PLAYER_KEY,legacyPlayer);
+  localStorage.setItem(REMEMBERED_TOKEN_KEY,legacyToken);
+}
 localStorage.removeItem(PLAYER_KEY);
 localStorage.removeItem(TOKEN_KEY);
+if(!sessionStorage.getItem(TOKEN_KEY)&&localStorage.getItem(REMEMBERED_PLAYER_KEY)&&localStorage.getItem(REMEMBERED_TOKEN_KEY)){
+  sessionStorage.setItem(PLAYER_KEY,localStorage.getItem(REMEMBERED_PLAYER_KEY));
+  sessionStorage.setItem(TOKEN_KEY,localStorage.getItem(REMEMBERED_TOKEN_KEY));
+}
+if(sessionStorage.getItem(PLAYER_KEY)&&sessionStorage.getItem(TOKEN_KEY)&&!localStorage.getItem(REMEMBERED_TOKEN_KEY)){
+  localStorage.setItem(REMEMBERED_PLAYER_KEY,sessionStorage.getItem(PLAYER_KEY));
+  localStorage.setItem(REMEMBERED_TOKEN_KEY,sessionStorage.getItem(TOKEN_KEY));
+}
+function forgetRememberedToken(){
+  if(localStorage.getItem(REMEMBERED_TOKEN_KEY)===sessionStorage.getItem(TOKEN_KEY)){
+    localStorage.removeItem(REMEMBERED_TOKEN_KEY);
+    localStorage.removeItem(REMEMBERED_PLAYER_KEY);
+  }
+}
 const entryUrl=new URL(location.href);
 if(entryUrl.searchParams.get('switchPlayer')==='1'){
+  forgetRememberedToken();
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(PLAYER_KEY);
   entryUrl.searchParams.delete('switchPlayer');
@@ -32,6 +53,7 @@ const originalRender=render;
 
 function authToken(){return sessionStorage.getItem(TOKEN_KEY)||''}
 function switchPlayer(){
+  forgetRememberedToken();
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(PLAYER_KEY);
   location.reload();
@@ -116,6 +138,7 @@ async function sendSecureRequest(payload,{allowQueue=true}={}){
     if(!response.ok){
       lastRequestError=data.error||('API '+response.status);
       if(response.status===401){
+        forgetRememberedToken();
         sessionStorage.removeItem(TOKEN_KEY);
         setSync('PIN sign-in required','bad');
       }else if(response.status===409){
@@ -481,6 +504,8 @@ identityGate=function(){
     if(!result){error.textContent=lastRequestError||'That PIN was not accepted. Try again.';return}
     sessionStorage.setItem(PLAYER_KEY,player);
     sessionStorage.setItem(TOKEN_KEY,result.token);
+    localStorage.setItem(REMEMBERED_PLAYER_KEY,player);
+    localStorage.setItem(REMEMBERED_TOKEN_KEY,result.token);
     overlay.remove();
     await markAccess();
     await loadShared();
