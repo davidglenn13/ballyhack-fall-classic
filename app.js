@@ -874,9 +874,7 @@ function board(){
 
         <td><b>${x.best3}</b></td>
 
-        ${x.rounds.slice(0,3).map(v=>`<td>${v||'—'}</td>`).join('')}
-
-        <td>${x.drop??'—'}</td>
+        ${x.rounds.map(v=>`<td>${v||'—'}</td>`).join('')}
       </tr>
     `;
   }).join('');
@@ -901,7 +899,7 @@ function board(){
               <th>R1</th>
               <th>R2</th>
               <th>R3</th>
-              <th>Dropped</th>
+              <th>R4</th>
             </tr>
           </thead>
 
