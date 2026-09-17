@@ -886,7 +886,7 @@ function board(){
 
       <div class="callout">
         <b>Points:</b>
-        5 = 3 or more under net par · 4 = 2 under · 3 = 1 under · 2 = net par · 1 = 1 over · 0 = 2 or more over.
+        5 = albatross or better · 4 = eagle · 3 = birdie · 2 = par · 1 = bogey · 0 = double bogey or worse.
         <br>
       </div>
 
