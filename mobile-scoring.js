@@ -22,6 +22,13 @@
     const amount=Number(wager?.value||0);
     const saved=picker&&(amount>0||readonly&&/\$\s*\d+/.test(readonly.textContent));
     if(!saved)return;
+
+    /* Once setup is complete, keep Game + Wager beneath the Press Bet section. */
+    const pressCard=document.querySelector('.nlp-card');
+    if(pressCard&&picker.previousElementSibling!==pressCard){
+      pressCard.insertAdjacentElement('afterend',picker);
+    }
+
     picker.classList.add('mobile-game-saved');
     const summary=document.createElement('div');
     summary.className='mobile-game-summary';
