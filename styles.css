@@ -128,3 +128,14 @@
   .mobile-game-saved:not(.mobile-game-editing)>:not(.mobile-game-summary){display:none}
   .mobile-game-editing>div:not(.mobile-game-summary){margin-top:12px}
 }
+
+/* The header must stay two short rows even before game setup is complete. */
+@media(max-width:760px){
+  .scoring-card .scoring-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+  .scoring-card .scoring-head>div:first-child{min-width:0}
+  .scoring-card .scoring-head .eyebrow{display:none}
+  .scoring-card .scoring-head h2{font-size:20px;line-height:1.15;white-space:nowrap;margin:0}
+  .scoring-card .live-badge{font-size:10px;white-space:nowrap;padding:6px 9px}
+  .scoring-card .scoring-head .sync-panel{grid-column:1/-1;width:100%;min-width:0;min-height:34px;margin:0;overflow-wrap:anywhere}
+  .scoring-card .scoring-head .sync-status{min-width:0;font-size:12px}
+}
