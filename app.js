@@ -885,7 +885,7 @@ function board(){
       <h2>Individual Live Standings - Stableford</h2>
 
       <div class="callout">
-        <b>Stableford points:</b>
+        <b>Points:</b>
         5 = 3 or more under net par · 4 = 2 under · 3 = 1 under · 2 = net par · 1 = 1 over · 0 = 2 or more over.
         <br>
       </div>
