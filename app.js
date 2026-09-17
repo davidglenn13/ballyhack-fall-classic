@@ -493,7 +493,7 @@ function sideGameResults(){
     body=`
       <div class="callout">
         <b>No side game selected for this round.</b><br>
-        Choose 40 Ball or a Nassau format on the Score screen.
+        Choose 40 Ball or a Nassau format on the Enter Score screen.
       </div>
     `;
   }
