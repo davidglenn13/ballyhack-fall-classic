@@ -108,3 +108,23 @@
   .scoring-card.score-setup-required>.score-actions{order:6}
   .scoring-card.score-setup-required>.callout{order:7}
 }
+
+/* Compact mobile scoring after a side-game wager has been saved. */
+.mobile-game-summary{display:none}
+@media(max-width:760px){
+  .scoring-card.score-active .scoring-head{flex-wrap:wrap;align-items:center}
+  .scoring-card.score-active .scoring-head .eyebrow{display:none}
+  .scoring-card.score-active .scoring-head h2{font-size:19px;margin:0}
+  .score-signed-in{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .scoring-card .scoring-head .sync-panel{order:3;flex-basis:100%;margin:2px 0 0;padding:6px 9px;min-height:32px;font-size:12px}
+  .scoring-card.score-active .score-controls{margin:8px 0}
+  .scoring-card.score-active .hole-focus{margin:4px 0 8px}
+  .scoring-card.score-active .score-player{min-height:86px;padding:8px 10px}
+  .scoring-card.score-active .score-actions{position:sticky;bottom:env(safe-area-inset-bottom,0px);z-index:4;background:#fff;padding:8px;margin:6px -12px 0;border-top:1px solid var(--line);box-shadow:0 -5px 15px #20304018}
+  .scoring-card:has(.score-input:focus) .score-actions{position:static}
+  .mobile-game-saved{padding:10px 12px!important;border:1px solid var(--line)!important;background:#f8fafc!important}
+  .mobile-game-saved .mobile-game-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--navy);font-size:13px;font-weight:850}
+  .mobile-game-edit{min-height:44px;flex:none}
+  .mobile-game-saved:not(.mobile-game-editing)>:not(.mobile-game-summary){display:none}
+  .mobile-game-editing>div:not(.mobile-game-summary){margin-top:12px}
+}

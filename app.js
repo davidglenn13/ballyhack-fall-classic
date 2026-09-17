@@ -637,6 +637,10 @@ function score(){
   const par=PAR[h-1];
   const si=SI[h-1];
   const sideGame=state.sideGames[r]||'None';
+  const wagerAmount=sideGame==='40 Ball'
+    ?Number(state.fortyBallBets?.[r]||0)
+    :Number(state.nassauBets?.[r]?.[group]?.value||0);
+  const gameReady=sideGame!=='None'&&sideGameWasSelected(r,group)&&wagerAmount>0;
 
   const playerRows=names.map(n=>{
     const p=player(n);
@@ -689,7 +693,7 @@ function score(){
   }).join('');
 
   return layout(`
-    <section class="card scoring-card ${sideGame==='None'||!sideGameWasSelected(r,group)?'score-setup-required':'score-active'}">
+    <section class="card scoring-card ${gameReady?'score-active':'score-setup-required'}">
 
       <div class="scoring-head">
         <div>

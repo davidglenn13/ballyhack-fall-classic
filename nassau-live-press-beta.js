@@ -76,7 +76,7 @@
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
   function moveSelectedPicker(r,g,target){
     const picker=document.querySelector('.side-game-picker');
-    if(!picker||!target||typeof sideGameWasSelected!=='function'||!sideGameWasSelected(r,g))return;
+    if(!picker||!target||!cfg(r,g).value||typeof sideGameWasSelected!=='function'||!sideGameWasSelected(r,g))return;
     picker.classList.add('side-game-picker-detached');
     picker.querySelector('.nlp-wager .wager-next')?.replaceChildren('Wager Set');
     target.insertAdjacentElement('afterend',picker);
@@ -120,7 +120,7 @@
     }else if(nextHole!==null&&nextHole!==firstHole){
       cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS</span><h3>${losingTeam?shortTeam(losingTeam):'No team eligible'}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>Current Match</span><b>${losingTeam?`${standing.margin} down`:'All square'}</b></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div>${losingTeam?`<button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press</button>`:''}</div>`);
     }
-    if(!cards.length){ moveSelectedPicker(r,g,scoreCard); return; }
+    if(!cards.length){ moveSelectedPicker(r,g,scoreSide.closest('.card')||app.querySelector('.card')); return; }
     const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Press Wagers</h2><p class="muted">Each wager is separate and runs from its starting hole through the end of ${seg.label}.</p><div class="nlp-wagers">${cards.join('')}</div>${!c.value?'<p class="notice" data-nlp-hint>Set Wager Amount in the Side Game selection above to activate Press.</p>':''}</section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     scoreCard?.insertAdjacentHTML('afterend',html);

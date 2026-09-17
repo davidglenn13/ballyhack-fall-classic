@@ -114,7 +114,7 @@
 
   function moveSelectedPicker(){
     const r=roundNo(),g=groupNo();
-    if(typeof sideGameWasSelected!=='function'||!sideGameWasSelected(r,g))return;
+    if(!wager(r)||typeof sideGameWasSelected!=='function'||!sideGameWasSelected(r,g))return;
     const card=document.querySelector('.scoring-card'),picker=document.querySelector('.side-game-picker');
     if(!card||!picker)return;
     picker.classList.add('side-game-picker-detached');

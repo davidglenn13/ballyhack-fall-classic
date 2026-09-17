@@ -305,7 +305,7 @@ score=function(){
     (mayRequest&&unlockRequest?'<button class="secondary" disabled>Unlock Requested</button>':'')+
     (isLocked&&currentUser()==='David Glenn'?'<button class="secondary" id="unlockGroup">Commissioner Unlock</button>':'')+
     '</div></section>';
-  html=html.replace('<section class="card scoring-card">','<section class="card scoring-card">'+syncPanel()+commissionerUnlockPanel());
+  html=html.replace(/<section class="card scoring-card[^"]*">/,match=>match+syncPanel()+commissionerUnlockPanel());
   return html.replace('</section>',review+'</section>');
 };
 
