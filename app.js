@@ -885,7 +885,7 @@ function board(){
       <h2>Individual Live Standings - Stableford</h2>
 
       <div class="callout">
-        <b>Points:</b>
+        <b>Net points:</b>
         5 = albatross or better · 4 = eagle · 3 = birdie · 2 = par · 1 = bogey · 0 = double bogey or worse.
         <br>
       </div>
