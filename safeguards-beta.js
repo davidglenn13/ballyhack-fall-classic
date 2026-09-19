@@ -441,6 +441,16 @@ render=function(){
   updateHeaderIdentity();
   if(tab==='Score'){
     const round=+(sessionStorage.r||1),group=+(sessionStorage.group||1);
+    const groupSelect=document.querySelector('#groupSel');
+    if(groupSelect&&currentUser()!=='David Glenn'){
+      const assignedGroup=roundGroupNames(round,1).includes(currentUser())?1:2;
+      [...groupSelect.options].forEach(option=>{
+        const optionGroup=Number(option.value);
+        option.textContent=(optionGroup===1?'First Group':'Second Group')+
+          (optionGroup===assignedGroup?' — Your Group':' — View Only');
+      });
+      groupSelect.setAttribute('aria-label','Scoring group. Your assigned group is editable; the other group is view only.');
+    }
     const disabled=locked(round,group)||!canEdit(round,group)||!authToken();
     document.querySelectorAll('[data-score-player]').forEach(input=>{
       input.disabled=disabled;
