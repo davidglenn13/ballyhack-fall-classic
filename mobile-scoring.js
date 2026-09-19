@@ -52,8 +52,13 @@
     }
 
     const tracker=document.querySelector('.forty-ball-beta-note');
-    if(tracker&&picker.nextElementSibling!==tracker){
-      picker.insertAdjacentElement('afterend',tracker);
+    if(tracker){
+      const review=card.querySelector('.score-review');
+      if(review){
+        card.insertBefore(tracker,review);
+      }else if(picker.nextElementSibling!==tracker){
+        picker.insertAdjacentElement('afterend',tracker);
+      }
     }
 
     picker.classList.add('mobile-game-saved');
