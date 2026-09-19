@@ -1433,6 +1433,26 @@ function bind(){
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
       }
 
+      // "None" is a hard reset for round side-game setup. Clear every wager
+      // type so selecting a game again always starts with a blank amount.
+      if(newGame==='None'){
+        state.fortyBallBets??={};
+        state.fortyBallBets[r]=0;
+        apiPost({op:'fortyBallBet',round:r,value:0});
+
+        state.nassauBets??={};
+        state.nassauBets[r]??={};
+        [1,2].forEach(group=>{
+          state.nassauBets[r][group]={value:0,presses:[]};
+          apiPost({
+            op:'nassauBetConfig',
+            round:r,
+            group,
+            config:{value:0,presses:[]}
+          });
+        });
+      }
+
       state.sideGames[r]=newGame;
       if(newGame==='None'){
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+sessionStorage.group);
