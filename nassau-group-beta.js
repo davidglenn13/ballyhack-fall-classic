@@ -93,34 +93,40 @@
     const r=roundNo(), g=groupNo(), value=select.value;
     const previous=displayGameForScore(r,g);
     try{
-    if(value===FORTY){
-      if(previous!==FORTY){clearFortyWager(r);sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');}
-      await setNassauGroup(r,1,false);
-      await setNassauGroup(r,2,false);
-      await setRoundGame(r,FORTY);
-    }else if(value===N55||value===N66){
-      if(previous!==value){clearNassauWager(r,g);sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+g);}
-      await setNassauGroup(r,g,value);
-      await setRoundGame(r,value);
-    }else{
-      // "None" is a full wager reset for this round. Returning to any side
-      // game must begin with a blank wager field.
-      clearFortyWager(r);
-      clearNassauWager(r,1);
-      clearNassauWager(r,2);
-      sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
-      sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
+      // The selected game is the authoritative action. Save that first so
+      // cleanup of old wagers/config cannot block or revert the selection.
+      await setRoundGame(r,value===N55||value===N66?value:value);
 
-      await setNassauGroup(r,g,false);
-      const other=g===1?2:1, otherFormat=formatFor(r,other);
-      if(otherFormat){
-        await setRoundGame(r,otherFormat);
+      if(value===FORTY){
+        if(previous!==FORTY){
+          clearFortyWager(r);
+          sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
+          sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
+        }
+        // 40 Ball replaces any Nassau setup for the round; clear in background.
+        Promise.allSettled([setNassauGroup(r,1,false),setNassauGroup(r,2,false)]);
+      }else if(value===N55||value===N66){
+        if(previous!==value){
+          clearNassauWager(r,g);
+          sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+g);
+        }
+        setNassauGroup(r,g,value).catch(()=>{});
       }else{
-        await setRoundGame(r,'None');
+        // None is a hard reset. UI switches to None immediately and all old
+        // wager/config data is cleared without being allowed to block it.
+        clearFortyWager(r);
+        clearNassauWager(r,1);
+        clearNassauWager(r,2);
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
+        Promise.allSettled([setNassauGroup(r,1,false),setNassauGroup(r,2,false)]);
       }
+      render();
+    }catch(error){
+      await loadShared();
+      render();
+      alert('That side-game change was not saved. Review the current choices and try again.');
     }
-    render();
-    }catch(error){await loadShared();render();alert('That side-game change was not saved. Review the current choices and try again.');}
   }
 
   function ensurePickerOptions(sel){
