@@ -34,8 +34,12 @@
     const picker=document.querySelector('.side-game-picker-detached')||card.querySelector('.side-game-picker');
     if(!picker)return;
     const game=picker.querySelector('#scoreSideGame')?.value||'None';
-    const wager=picker.querySelector('[data-nlp-wager], [data-fbw-wager]');
-    const readonly=picker.querySelector('.fbw-readonly');
+    const wager=game==='40 Ball'
+      ?picker.querySelector('[data-fbw-wager]')
+      :game==='None'
+        ?null
+        :picker.querySelector('[data-nlp-wager]');
+    const readonly=game==='40 Ball'?picker.querySelector('.fbw-readonly'):null;
     const amount=Number(wager?.value||0);
     const readonlyAmount=readonly&&/\$\s*\d+/.test(readonly.textContent);
     const saved=game!=='None'&&(amount>0||readonlyAmount);
