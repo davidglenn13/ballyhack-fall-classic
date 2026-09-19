@@ -141,6 +141,23 @@ function roundPoints(r,n){
   )
 }
 
+function roundNetToPar(r,n){
+  let total=0, entered=0;
+  for(let h=1;h<=18;h++){
+    const net=netScore(r,n,h);
+    if(net===null)continue;
+    total+=net-PAR[h-1];
+    entered++;
+  }
+  return entered?total:null
+}
+
+function formatToPar(value){
+  if(value===null)return '—';
+  if(value===0)return 'E';
+  return value>0?\`+\${value}\`:String(value)
+}
+
 function totals(n){
   let rs=[1,2,3,4].map(r=>roundPoints(r,n));
   let played=rs.filter(
@@ -684,12 +701,12 @@ function score(){
 
         <div class="score-result">
           ${g
-            ?`Net ${g-st} · <b>${pts} pts</b>`
+            ?`Stableford Points: <b>${roundPoints(r,n)}</b>`
             :'Enter gross'}
         </div>
 
         <div class="round-running">
-          Round: ${roundPoints(r,n)} pts
+          Net to Par: <b>${formatToPar(roundNetToPar(r,n))}</b>
         </div>
       </div>
     `;
