@@ -65,27 +65,28 @@
     return formatFor(r,g)||'None';
   }
 
-  async function clearFortyWager(r){
-    // A wager field can fire change/blur just before the game selector changes.
-    // Let that older write finish first, then make the reset the final write.
-    try{if(window.__fortyWagerPending)await window.__fortyWagerPending;}catch(e){}
+  function clearFortyWager(r){
     state.fortyBallBets??={};
     state.fortyBallBets[r]=0;
     save();
-    if(!await apiPost({op:'fortyBallBet',round:r,value:0}))throw new Error('40 Ball wager reset failed');
+    // The game change must never be blocked by a wager-reset sync conflict.
+    // Keep the UI reset locally and sync the zero in the background.
+    Promise.resolve(window.__fortyWagerPending).catch(()=>{}).finally(()=>{
+      apiPost({op:'fortyBallBet',round:r,value:0}).catch?.(()=>{});
+    });
   }
 
-  async function clearNassauWager(r,g){
+  function clearNassauWager(r,g){
     state.nassauBets??={};
     state.nassauBets[r]??={};
     state.nassauBets[r][g]={value:0,presses:[]};
     save();
-    if(!await apiPost({
+    apiPost({
       op:'nassauBetConfig',
       round:r,
       group:g,
       config:{value:0,presses:[]}
-    }))throw new Error('Nassau wager reset failed');
+    }).catch?.(()=>{});
   }
 
   async function handleScoreGameChange(select){
@@ -93,20 +94,20 @@
     const previous=displayGameForScore(r,g);
     try{
     if(value===FORTY){
-      if(previous!==FORTY)await clearFortyWager(r);
+      if(previous!==FORTY){clearFortyWager(r);sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');}
       await setNassauGroup(r,1,false);
       await setNassauGroup(r,2,false);
       await setRoundGame(r,FORTY);
     }else if(value===N55||value===N66){
-      if(previous!==value)await clearNassauWager(r,g);
+      if(previous!==value){clearNassauWager(r,g);sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+g);}
       await setNassauGroup(r,g,value);
       await setRoundGame(r,value);
     }else{
       // "None" is a full wager reset for this round. Returning to any side
       // game must begin with a blank wager field.
-      await clearFortyWager(r);
-      await clearNassauWager(r,1);
-      await clearNassauWager(r,2);
+      clearFortyWager(r);
+      clearNassauWager(r,1);
+      clearNassauWager(r,2);
       sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
       sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
 
