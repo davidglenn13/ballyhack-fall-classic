@@ -86,7 +86,11 @@
     const app=document.querySelector('#app'); if(!app)return;
     const scoreSide=document.querySelector('#scoreSideGame'); if(!scoreSide){removeSideGameWagerInputs();return;}
     const r=+(sessionStorage.r||1),g=+(sessionStorage.group||1),h=+(sessionStorage.hole||1);
-    if(!hasNassau(r,g))return;
+    const selected=state.sideGames?.[r]||'None';
+    if(selected==='40 Ball'||selected==='None'||!hasNassau(r,g)){
+      document.querySelectorAll('.nlp-wager,.nlp-card').forEach(x=>x.remove());
+      return;
+    }
     addWagerToPicker(r,g);
     const existingCard=app.querySelector('.nlp-card');
     if(existingCard){
