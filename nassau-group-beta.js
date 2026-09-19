@@ -65,23 +65,52 @@
     return formatFor(r,g)||'None';
   }
 
+  async function clearFortyWager(r){
+    state.fortyBallBets??={};
+    state.fortyBallBets[r]=0;
+    save();
+    if(!await apiPost({op:'fortyBallBet',round:r,value:0}))throw new Error('40 Ball wager reset failed');
+  }
+
+  async function clearNassauWager(r,g){
+    state.nassauBets??={};
+    state.nassauBets[r]??={};
+    state.nassauBets[r][g]={value:0,presses:[]};
+    save();
+    if(!await apiPost({
+      op:'nassauBetConfig',
+      round:r,
+      group:g,
+      config:{value:0,presses:[]}
+    }))throw new Error('Nassau wager reset failed');
+  }
+
   async function handleScoreGameChange(select){
     const r=roundNo(), g=groupNo(), value=select.value;
+    const previous=displayGameForScore(r,g);
     try{
     if(value===FORTY){
+      if(previous!==FORTY)await clearFortyWager(r);
       await setNassauGroup(r,1,false);
       await setNassauGroup(r,2,false);
       await setRoundGame(r,FORTY);
     }else if(value===N55||value===N66){
+      if(previous!==value)await clearNassauWager(r,g);
       await setNassauGroup(r,g,value);
       await setRoundGame(r,value);
     }else{
+      // "None" is a full wager reset for this round. Returning to any side
+      // game must begin with a blank wager field.
+      await clearFortyWager(r);
+      await clearNassauWager(r,1);
+      await clearNassauWager(r,2);
+      sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
+      sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
+
       await setNassauGroup(r,g,false);
       const other=g===1?2:1, otherFormat=formatFor(r,other);
       if(otherFormat){
         await setRoundGame(r,otherFormat);
-      }else if((state.sideGames?.[r]||'None')===FORTY){
-        await setRoundGame(r,'None');
       }else{
         await setRoundGame(r,'None');
       }
