@@ -201,6 +201,22 @@
     return true;
   }
 
+  // Entering a gross score must never auto-count it in 40 Ball.
+  // A brand-new score starts unselected; deleting a score also clears any old selection.
+  document.addEventListener('change',e=>{
+    const input=e.target.closest?.('[data-score-player]');
+    if(!input||!active40())return;
+    const r=roundNo(), g=groupNo(), n=input.dataset.scorePlayer, h=+input.dataset.hole;
+    const map=selMap(r,g), k=keyFor(n,h);
+    const isNewScore=!input.defaultValue && !!input.value;
+    const isCleared=!input.value;
+    if((isNewScore||isCleared)&&map[k]){
+      delete map[k];
+      save();
+      apiPost({op:'fortyBallSelection',round:r,group:g,player:n,hole:h,value:false});
+    }
+  },true);
+
   document.addEventListener('pointerup',e=>{
     if(e.pointerType!=='touch' && e.pointerType!=='pen')return;
     if(delegatedToggle(e))lastTouchTap=Date.now();
