@@ -9,6 +9,10 @@
     if(next)next.textContent='Next step: enter the wager for this side game';
     const hole=card.querySelector('.hole-focus');
     if(hole)card.insertBefore(picker,hole);
+    const tracker=document.querySelector('.forty-ball-beta-note');
+    if(tracker&&picker.nextElementSibling!==tracker){
+      picker.insertAdjacentElement('afterend',tracker);
+    }
   }
 
   function enhance(){
@@ -45,6 +49,11 @@
     const pressCard=document.querySelector('.nlp-card');
     if(pressCard&&picker.previousElementSibling!==pressCard){
       pressCard.insertAdjacentElement('afterend',picker);
+    }
+
+    const tracker=document.querySelector('.forty-ball-beta-note');
+    if(tracker&&picker.nextElementSibling!==tracker){
+      picker.insertAdjacentElement('afterend',tracker);
     }
 
     picker.classList.add('mobile-game-saved');
