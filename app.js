@@ -140,18 +140,6 @@ function roundPoints(r,n){
     0
   )
 }
-
-function roundNetToPar(r,n){
-  let total=0, entered=0;
-  for(let h=1;h<=18;h++){
-    const net=netScore(r,n,h);
-    if(net===null)continue;
-    total+=net-PAR[h-1];
-    entered++;
-  }
-  return entered?total:null
-}
-
 function formatToPar(value){
   if(value===null)return '—';
   if(value===0)return 'E';
@@ -701,12 +689,14 @@ function score(){
 
         <div class="score-result">
           ${g
-            ?`Stableford Points: <b>${roundPoints(r,n)}</b>`
+            ?`Stableford Points: <b>${pts}</b>`
             :'Enter gross'}
         </div>
 
         <div class="round-running">
-          Net to Par: <b>${formatToPar(roundNetToPar(r,n))}</b>
+          ${g
+            ?`Net to Par: <b>${formatToPar((g-st)-par)}</b>`
+            :'Net to Par: —'}
         </div>
       </div>
     `;
