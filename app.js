@@ -1377,13 +1377,40 @@ function bind(){
   document.querySelector('#scoreSideGame')
     ?.addEventListener('change',e=>{
       let r=+(sessionStorage.r||1);
+      const oldGame=state.sideGames[r]||'None';
+      const newGame=e.target.value;
 
-      state.sideGames[r]=e.target.value;
-      if(e.target.value==='None'){
+      if(oldGame!==newGame){
+        // Changing the side game invalidates the old wager. Do not carry money
+        // from one game into another; require a fresh wager for the new choice.
+        if(oldGame==='40 Ball'){
+          state.fortyBallBets??={};
+          state.fortyBallBets[r]=0;
+          apiPost({op:'fortyBallBet',round:r,value:0});
+        }else if(oldGame!=='None'){
+          state.nassauBets??={};
+          state.nassauBets[r]??={};
+          [1,2].forEach(group=>{
+            state.nassauBets[r][group]={value:0,presses:[]};
+            apiPost({
+              op:'nassauBetConfig',
+              round:r,
+              group,
+              config:{value:0,presses:[]}
+            });
+          });
+        }
+
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
+      }
+
+      state.sideGames[r]=newGame;
+      if(newGame==='None'){
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+sessionStorage.group);
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
-      }else if(e.target.value==='40 Ball'){
+      }else if(newGame==='40 Ball'){
         sessionStorage.setItem('ballyhack-side-selected-'+r+'-1','1');
         sessionStorage.setItem('ballyhack-side-selected-'+r+'-2','1');
       }else{
@@ -1394,7 +1421,7 @@ function bind(){
       apiPost({
         op:'sideGame',
         round:r,
-        value:e.target.value
+        value:newGame
       });
 
       render();
