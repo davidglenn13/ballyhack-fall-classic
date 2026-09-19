@@ -957,17 +957,20 @@ function board(){
 }
 
 function cottage(){
-  let c1=[1,2,3,4].map(r=>cottageRound(1,r));
-  let c2=[1,2,3,4].map(r=>cottageRound(2,r));
+  const privacy=typeof active40Privacy==='function'?active40Privacy():null;
+  const rounds=[1,2,3,4];
+  let c1=rounds.map(r=>privacy&&r===privacy.round?null:cottageRound(1,r));
+  let c2=rounds.map(r=>privacy&&r===privacy.round?null:cottageRound(2,r));
 
-  let t1=cottageTotal(1);
-  let t2=cottageTotal(2);
+  let t1=c1.reduce((a,v)=>a+(v||0),0);
+  let t2=c2.reduce((a,v)=>a+(v||0),0);
 
   return layout(`
     <section class="card">
       <div class="eyebrow">TEAM COMPETITION</div>
       <h2 class="red">Cottage Cup</h2>
       <p>Track the team race between Cottage 1 and Cottage 2.</p>
+      ${privacy?'<div class="permission-note">40 Ball privacy is active. Current-round Cottage Cup scoring is hidden until the round is complete.</div>':''}
     </section>
 
     <section class="card half">
@@ -984,13 +987,13 @@ function cottage(){
       <div class="kpi">${t1}</div>
 
       <div class="muted">
-        Best 3 of 4 each round · all rounds count
+        ${privacy?'Through completed rounds':'Best 3 of 4 each round · all rounds count'}
       </div>
 
       ${c1.map((x,i)=>`
         <div class="segment">
           <b>R${i+1}</b>
-          <span>${x} pts</span>
+          <span>${x===null?'Private':x+' pts'}</span>
         </div>
       `).join('')}
     </section>
@@ -1009,13 +1012,13 @@ function cottage(){
       <div class="kpi">${t2}</div>
 
       <div class="muted">
-        Best 3 of 4 each round · all rounds count
+        ${privacy?'Through completed rounds':'Best 3 of 4 each round · all rounds count'}
       </div>
 
       ${c2.map((x,i)=>`
         <div class="segment">
           <b>R${i+1}</b>
-          <span>${x} pts</span>
+          <span>${x===null?'Private':x+' pts'}</span>
         </div>
       `).join('')}
     </section>
