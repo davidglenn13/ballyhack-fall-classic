@@ -143,7 +143,7 @@ function roundPoints(r,n){
 function formatToPar(value){
   if(value===null)return '—';
   if(value===0)return 'E';
-  return value>0?\`+\${value}\`:String(value)
+  return value>0?'+'+value:String(value)
 }
 
 function totals(n){
