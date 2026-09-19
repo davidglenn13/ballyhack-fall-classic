@@ -868,28 +868,54 @@ function score(){
 
   `);
 }
+function active40Privacy(){
+  if(currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken())return null;
+  const r=+(sessionStorage.r||defaultRoundForToday());
+  if((state.sideGames?.[r]||'None')!=='40 Ball'||roundFullyEntered(r))return null;
+  const own=roundGroupNames(r,1).includes(currentUser())?1:
+    roundGroupNames(r,2).includes(currentUser())?2:null;
+  return own?{round:r,group:own}:null;
+}
+
 function board(){
   const n=completedRounds();
+  const privacy=active40Privacy();
 
-  let rows=leaderboard().map((x,i)=>{
-    const m=movementFor(x.p.name,n,i+1);
+  let data;
+  if(privacy){
+    const priorRound=Math.max(0,privacy.round-1);
+    data=PLAYERS.map((p,index)=>({p,...totals(p.name),_index:index}))
+      .sort((a,b)=>{
+        if(!priorRound)return a._index-b._index;
+        const av=chaseTotal(a,priorRound),bv=chaseTotal(b,priorRound);
+        return bv-av||a._index-b._index;
+      });
+  }else{
+    data=leaderboard();
+  }
+
+  let rows=data.map((x,i)=>{
+    const ownCurrent=privacy&&roundGroupNames(privacy.round,privacy.group).includes(x.p.name);
+    const hiddenCurrent=privacy&&!ownCurrent;
+    const m=privacy?{label:'—'}:movementFor(x.p.name,n,i+1);
+    const cells=x.rounds.map((v,idx)=>{
+      const r=idx+1;
+      if(privacy&&r===privacy.round&&hiddenCurrent)return '<td><span class="private-score">Private</span></td>';
+      return `<td>${v||'—'}</td>`;
+    }).join('');
 
     return `
-      <tr class="${i<3?'winner':''}">
-        <td><span class="rank">${i+1}</span></td>
-
+      <tr class="${!privacy&&i<3?'winner':''}">
+        <td><span class="rank">${privacy?'—':i+1}</span></td>
         <td>
           <div class="board-player">
             ${avatar(x.p.name)}
             <span>${x.p.name}</span>
           </div>
         </td>
-
         <td><b>${m.label}</b></td>
-
-        <td><b>${x.best3}</b></td>
-
-        ${x.rounds.map(v=>`<td>${v||'—'}</td>`).join('')}
+        <td><b>${privacy?'—':x.best3}</b></td>
+        ${cells}
       </tr>
     `;
   }).join('');
@@ -903,6 +929,8 @@ function board(){
         5 = Albatross or Better · 4 = Eagle · 3 = Birdie · 2 = Par · 1 = Bogey.
         <br>
       </div>
+
+      ${privacy?`<div class="permission-note">40 Ball privacy is active. Your group’s current-round scoring is visible; the other group’s current-round scoring, position, movement, and Best 3 are hidden until the round is complete.</div>`:''}
 
       <div class="table-wrap">
         <table>
