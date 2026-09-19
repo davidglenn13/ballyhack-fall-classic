@@ -3,7 +3,14 @@
   const standingsPage=board;
   board=function(){
     const standings=standingsPage();
-    const forecast=`
+    const private40=typeof active40Privacy==='function'&&active40Privacy();
+    const forecast=private40?`
+      <section class="card">
+        <div class="eyebrow">TOURNAMENT OUTLOOK</div>
+        <h2 class="red">Chase for the Cup — Forecast</h2>
+        <div class="permission-note">Forecast is hidden while 40 Ball privacy is active. It will return when the round is complete.</div>
+      </section>
+    `:`
       <section class="card">
         <div class="eyebrow">TOURNAMENT OUTLOOK</div>
         <h2 class="red">Chase for the Cup — Forecast</h2>
