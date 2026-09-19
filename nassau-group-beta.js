@@ -66,6 +66,9 @@
   }
 
   async function clearFortyWager(r){
+    // A wager field can fire change/blur just before the game selector changes.
+    // Let that older write finish first, then make the reset the final write.
+    try{if(window.__fortyWagerPending)await window.__fortyWagerPending;}catch(e){}
     state.fortyBallBets??={};
     state.fortyBallBets[r]=0;
     save();
