@@ -96,7 +96,11 @@
 
   async function persistWager(r,value){
     state.fortyBallBets??={};state.fortyBallBets[r]=value;save();
-    await apiPost({op:'fortyBallBet',round:r,value});
+    const pending=apiPost({op:'fortyBallBet',round:r,value});
+    window.__fortyWagerPending=pending;
+    try{return await pending;}finally{
+      if(window.__fortyWagerPending===pending)window.__fortyWagerPending=null;
+    }
   }
 
   function add40WagerToScore(){
