@@ -97,6 +97,9 @@
   .scoring-card.score-setup-required>.callout{order:7}
 }
 
+/* Wager amount is self-explanatory; remove the redundant "Next step" instruction. */
+.wager-next{display:none!important}
+
 /* Compact mobile scoring after a side-game wager has been saved. */
 .mobile-game-summary{display:none}
 @media(max-width:760px){
