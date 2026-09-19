@@ -120,8 +120,10 @@
     picker.classList.add('side-game-picker-detached');
     picker.querySelector('.wager-next')?.replaceChildren('Wager Set');
     const note=document.querySelector('.forty-ball-beta-note');
-    if(note)card.insertAdjacentElement('afterend',note);
-    (note||card).insertAdjacentElement('afterend',picker);
+    const review=card.querySelector('.score-review');
+    if(note&&review)card.insertBefore(note,review);
+    else if(note)card.insertAdjacentElement('afterend',note);
+    card.insertAdjacentElement('afterend',picker);
   }
 
   function roundCashBlock(r){
