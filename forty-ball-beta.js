@@ -118,7 +118,12 @@
       note.innerHTML=`<div class="forty-tracker-title">40 Ball Tracker</div><div class="forty-tracker-stats"><div><strong>${s.count}/40</strong><span>Scores</span></div><div><strong>${fmtRel(s.rel)}</strong><span>Relative to Par</span></div></div>`;
     }
 
-    await persist(r,g,n,h,next);
+    const saved=await persist(r,g,n,h,next);
+    if(!saved){
+      if(next)delete map[k]; else map[k]=true;
+      save();
+      render();
+    }
   }
 
   const style=document.createElement('style');
