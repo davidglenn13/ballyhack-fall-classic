@@ -630,6 +630,9 @@ function score(){
   let r=+(sessionStorage.r||1);
   let group=+(sessionStorage.group||1);
   let h=+(sessionStorage.hole||1);
+  const holeLoopKey=`ballyhack-hole-loop-${r}-${group}`;
+  if(h===18)sessionStorage.setItem(holeLoopKey,'1');
+  const holeLoopUnlocked=sessionStorage.getItem(holeLoopKey)==='1';
 
   const rd=ROUNDS[r-1];
   const names=group===1?rd.first:rd.second;
@@ -794,7 +797,7 @@ function score(){
         <button
           class="hole-nav"
           id="prevHole"
-          ${h===1?'disabled':''}
+          ${h===1&&!holeLoopUnlocked?'disabled':''}
         >
           ‹
         </button>
@@ -812,7 +815,7 @@ function score(){
         <button
           class="hole-nav"
           id="nextHole"
-          ${h===18?'disabled':''}
+          ${h===18&&!holeLoopUnlocked?'disabled':''}
         >
           ›
         </button>
@@ -828,7 +831,7 @@ function score(){
         <button
           class="secondary"
           id="prevHoleBottom"
-          ${h===1?'disabled':''}
+          ${h===1&&!holeLoopUnlocked?'disabled':''}
         >
           ← Previous
         </button>
@@ -840,7 +843,7 @@ function score(){
         <button
           class="primary"
           id="nextHoleBottom"
-          ${h===18?'disabled':''}
+          ${h===18&&!holeLoopUnlocked?'disabled':''}
         >
           Next Hole →
         </button>
@@ -1447,9 +1450,13 @@ function bind(){
 
   const goHole=d=>{
     let h=+(sessionStorage.hole||1);
+    const r=+(sessionStorage.r||1);
+    const group=+(sessionStorage.group||1);
+    const loopUnlocked=sessionStorage.getItem(`ballyhack-hole-loop-${r}-${group}`)==='1';
 
-    sessionStorage.hole=
-      Math.max(1,Math.min(18,h+d));
+    if(loopUnlocked&&h===18&&d>0)sessionStorage.hole=1;
+    else if(loopUnlocked&&h===1&&d<0)sessionStorage.hole=18;
+    else sessionStorage.hole=Math.max(1,Math.min(18,h+d));
 
     render();
   };
