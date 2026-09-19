@@ -146,7 +146,8 @@
         if(card)card.insertAdjacentHTML('beforeend',individualPanel(model));
       }
 
-      const cottageCards=[...app.querySelectorAll('.card')].filter(c=>/^Cottage [12]$/.test(c.querySelector('h2')?.textContent.trim()||''));
+      const private40=typeof active40Privacy==='function'&&active40Privacy();
+      const cottageCards=private40?[]:[...app.querySelectorAll('.card')].filter(c=>/^Cottage [12]$/.test(c.querySelector('h2')?.textContent.trim()||''));
       cottageCards.forEach(card=>{
         const c=+card.querySelector('h2').textContent.trim().slice(-1);
         if(card.querySelector('[data-cottage-prob]'))return;
