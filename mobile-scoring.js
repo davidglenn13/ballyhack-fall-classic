@@ -68,9 +68,8 @@
   }
 
   function resync(){ setTimeout(enhance,0); }
-  document.addEventListener('input',e=>{
-    if(e.target.matches?.('[data-nlp-wager], [data-fbw-wager]'))resync();
-  });
+  // Do not collapse/move the wager panel while the golfer is still typing.
+  // Wait for the wager field to commit (change/blur) before treating setup as complete.
   document.addEventListener('change',e=>{
     if(e.target.matches?.('#scoreSideGame, [data-nlp-wager], [data-fbw-wager]'))resync();
   });
