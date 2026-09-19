@@ -191,6 +191,29 @@ test('Commissioner restore recovers state atomically and rejects old offline edi
   assert.equal((await x.get('David Glenn')).backups.length>=2,true);
 });
 
+test('40 Ball rejects a 41st counted score for a group',async()=>{
+  const x=session();await x.login('David Glenn');
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
+  const names=GROUPS[1][1];
+  for(const name of names)for(let hole=1;hole<=18;hole++){
+    assert.equal((await x.post('David Glenn',{op:'score',round:1,player:name,hole,gross:5,expectedGross:0,mutationId:`cap-score-${name}-${hole}`})).status,200);
+  }
+  let counted=0;
+  for(const name of names){
+    for(let hole=1;hole<=18;hole++){
+      const result=await x.post('David Glenn',{op:'fortyBallSelection',round:1,group:1,player:name,hole,value:true});
+      counted++;
+      if(counted<=40)assert.equal(result.status,200,result.body.error);
+      else{
+        assert.equal(result.status,409);
+        assert.match(result.body.error,/40 scores/);
+        return;
+      }
+    }
+  }
+  assert.fail('Expected a 41st 40 Ball selection attempt');
+});
+
 test('Four-round scoring and 40 Ball selections remain available to both groups',async()=>{
   const x=session();await x.login('David Glenn');
   for(let round=1;round<=4;round++){
