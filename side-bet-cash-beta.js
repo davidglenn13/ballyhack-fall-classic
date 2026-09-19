@@ -105,7 +105,11 @@
 
   function add40WagerToScore(){
     const r=roundNo(),g=groupNo();
-    if(!fortyActive(r))return;
+    if(!fortyActive(r)){
+      document.querySelectorAll('.fbw-wager').forEach(x=>x.remove());
+      return;
+    }
+    document.querySelectorAll('.nlp-wager,.nlp-card').forEach(x=>x.remove());
     const picker=document.querySelector('.side-game-picker'),sel=document.querySelector('#scoreSideGame');
     if(!picker||!sel||picker.querySelector('.fbw-wager'))return;
     const host=sel.closest('div')||picker,v=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?wager(r):0;
