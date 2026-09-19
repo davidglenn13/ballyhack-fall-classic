@@ -281,6 +281,12 @@ async function baseOperation(db,body,actor){
     const games=await setting(db,'sideGames',{});if(games[round]!=='40 Ball')return json({error:'40 Ball is not selected for this round'},409);
     const scored=await db.prepare('SELECT gross FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,body.player,hole).first();
     if(body.value&&!scored)return json({error:'Enter a score before counting it in 40 Ball'},409);
+    const existingSelections=await setting(db,'fortyBallSelections',{});
+    const existingGroup=existingSelections?.[round]?.[group]||{};
+    const selectionKey=`${body.player}|${hole}`;
+    if(body.value&&!existingGroup[selectionKey]&&Object.values(existingGroup).filter(Boolean).length>=40){
+      return json({error:'40 scores are already counted for this group'},409);
+    }
     return modifySetting(db,'fortyBallSelections',body.expectedRevision,current=>{current[String(round)]??={};current[String(round)][String(group)]??={};const key=`${body.player}|${hole}`;if(body.value)current[String(round)][String(group)][key]=true;else delete current[String(round)][String(group)][key];return current});
   }else if(op==='fortyBallBet'){
     const round=Number(body.round),value=Number(body.value);if(!GROUPS[round]||!validAmount(value))return json({error:'Invalid 40 Ball wager'},400);
