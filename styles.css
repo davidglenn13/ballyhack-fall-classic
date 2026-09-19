@@ -120,6 +120,24 @@
   .mobile-game-editing>div:not(.mobile-game-summary){margin-top:12px}
 }
 
+
+/* Mobile player card: keep the two per-hole results together even when 40 Ball controls are present. */
+@media(max-width:760px){
+  .score-player{
+    grid-template-columns:minmax(0,1fr) 76px;
+    grid-template-rows:auto auto auto;
+    column-gap:10px;
+    row-gap:4px;
+    align-items:start;
+  }
+  .score-player-ident{grid-column:1;grid-row:1}
+  .score-input{grid-column:2;grid-row:1;align-self:start}
+  .score-result{grid-column:1;grid-row:2;margin:2px 0 0;line-height:1.25}
+  .round-running{grid-column:1;grid-row:3;margin:0;line-height:1.25}
+  .forty-ball-toggle{grid-column:2;grid-row:2 / 4;margin-top:4px;align-self:start}
+  .forty-ball-toggle .forty-ball-select{margin:0}
+}
+
 /* The header must stay two short rows even before game setup is complete. */
 @media(max-width:760px){
   .scoring-card .scoring-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center}
