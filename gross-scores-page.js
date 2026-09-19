@@ -3,6 +3,19 @@
   const TAB='Gross Scores';
 
   function gross(r,n,h){ return +(state.scores?.[r]?.[n]?.[h]||0); }
+  function commissioner(){ return currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken(); }
+  function ownGroup(r){
+    if(roundGroupNames(r,1).includes(currentUser()))return 1;
+    if(roundGroupNames(r,2).includes(currentUser()))return 2;
+    return null;
+  }
+  function canViewGross(r,n){
+    if(commissioner())return true;
+    if((state.sideGames?.[r]||'None')!=='40 Ball')return true;
+    if(typeof roundFullyEntered==='function'&&roundFullyEntered(r))return true;
+    const g=ownGroup(r);
+    return !!g&&roundGroupNames(r,g).includes(n);
+  }
   function valsFor(r,n){ return [...Array(18)].map((_,i)=>gross(r,n,i+1)); }
   function sum(vals){ return vals.reduce((a,b)=>a+(+b||0),0); }
   function roundGross(r,n){
@@ -12,6 +25,7 @@
   }
 
   function roundCell(r,n){
+    if(!canViewGross(r,n))return '<span class="gross-private">Private</span>';
     const x=roundGross(r,n);
     if(!x.entered)return '<span class="gross-empty">—</span>';
     const suffix=x.entered===18?'':'*';
@@ -90,7 +104,7 @@
 
   function openDetail(n,r){
     const mount=document.querySelector('#grossDetailMount');
-    if(!mount)return;
+    if(!mount||!canViewGross(r,n))return;
     mount.innerHTML=detailCard(n,r);
 
     mount.querySelector('[data-close-gross-detail]')?.addEventListener('click',e=>{
@@ -129,6 +143,8 @@
 
   const s=document.createElement('style');
   s.textContent=`
+    .gross-private{display:inline-block;padding:6px 8px;border-radius:8px;background:#eef2f6;color:var(--muted);font-size:11px;font-weight:800}
+
     .gross-page-card{max-width:900px;margin-left:auto;margin-right:auto}
     .gross-summary-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:14px;margin-top:14px}
     .gross-summary-table{width:100%;border-collapse:collapse;min-width:590px;background:#fff}
