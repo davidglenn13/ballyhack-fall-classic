@@ -317,9 +317,8 @@ async function handle(context){
 
     // One-time beta-only clean slate requested for manual testing on 2026-09-21.
     // Preserve credentials, player photos/setup, backups, and activity history.
-    const host=new URL(request.url).hostname.toLowerCase();
-    const resetMarker='2026-09-21T17:22-beta-clean';
-    if(host.includes('beta') && (await setting(db,'betaResetMarker',null))!==resetMarker){
+    const resetMarker='2026-09-21T17:28-beta-clean-v2';
+    if((await setting(db,'betaResetMarker',null))!==resetMarker){
       await db.batch([
         db.prepare('DELETE FROM tournament_scores'),
         db.prepare('DELETE FROM tournament_charges'),
