@@ -315,27 +315,6 @@ async function handle(context){
   try{
     await ensureActivity(db);
 
-    // One-time beta-only clean slate for manual testing on 2026-09-21 14:16 ET.
-    // Preserve credentials, player setup/photos, backups, and activity history.
-    const resetMarker='2026-09-21T18:16-beta-clean-v3';
-    if((await setting(db,'betaResetMarker',null))!==resetMarker){
-      await db.batch([
-        db.prepare('DELETE FROM tournament_scores'),
-        db.prepare('DELETE FROM tournament_charges'),
-        db.prepare('DELETE FROM tournament_group_locks'),
-        db.prepare('DELETE FROM tournament_score_audit')
-      ]);
-      await putSetting(db,'sideGames',{1:'None',2:'None',3:'None',4:'None'});
-      await putSetting(db,'fortyBallSelections',{});
-      await putSetting(db,'fortyBallBets',{});
-      await putSetting(db,'nassauGroups',{});
-      await putSetting(db,'nassauBets',{});
-      await putSetting(db,'unlockRequests',{});
-      await putSetting(db,'frozen',false);
-      await putSetting(db,'epoch',randomHex(12));
-      await putSetting(db,'betaResetMarker',resetMarker);
-      await activity(db,'System','Beta test data reset','Scores, side games, wagers, selections, locks, charges, and score audit cleared');
-    }
     if(request.method==='GET'){
       const out=await snapshot(db),actor=await authenticate(db,request);
       if(actor?.role!=='admin'){
