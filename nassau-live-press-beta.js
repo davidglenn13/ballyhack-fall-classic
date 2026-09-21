@@ -165,7 +165,7 @@
       cards.push(wagerCard('PRESS',activePress,activePress.pressedBy,activeStanding));
       if(counterPress){
         cards.push(wagerCard('PRESS THE PRESS',counterPress,counterPress.pressedBy,pressStanding(r,g,seg,counterPress)));
-      }else if(nextHole!==null&&nextHole>=+activePress.fromHole){
+      }else if(nextHole!==null&&nextHole>=+activePress.fromHole&&activeStanding?.played&&activeStanding.margin&&((activeStanding.margin>0?'b':'a')===counterTeamKey)){
         cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS THE PRESS</span><h3>${shortTeam(counterTeam)}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div><div class="nlp-side"><span>Remaining Holes</span><b>${seg.holes.filter(x=>x>=nextHole).length}</b></div><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press the Press</button></div>`);
       }
     }else if(nextHole!==null&&nextHole!==firstHole){
