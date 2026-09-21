@@ -136,11 +136,13 @@
     const firstHole=seg.holes[0],nextHole=nextUnplayedHole(r,g,seg),singleHole=!!seg.singleHole;
     sanitizePresses(r,g,si,seg,c,nextHole);
 
-    const isFirstHole=h===firstHole,isNextHole=h===nextHole;
     const currentStanding=liveStanding(r,g,seg);
     const viewedStanding=liveStanding(r,g,seg,h);
     const segmentPresses=c.presses.filter(p=>+p.segment===si),activePress=originalPressInSegment(c,si),counterPress=counterPressFor(c,activePress),pressRecorded=!!activePress,counterRecorded=!!counterPress;
-    const loser=(!singleHole&&!pressRecorded&&!isFirstHole&&isNextHole)?currentStanding.loser:null;
+    // Historical hole browsing only changes the displayed standing. Press
+    // availability is always based on the actual next unplayed hole so the
+    // live Press action does not disappear when reviewing earlier holes.
+    const loser=(!singleHole&&!pressRecorded&&nextHole!==null&&nextHole!==firstHole)?currentStanding.loser:null;
     const losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
     const counterTeamKey=activePress?(activePress.pressedBy==='a'?'b':'a'):null;
     const counterTeam=counterTeamKey?(counterTeamKey==='a'?teams[0]:teams[1]):null;
