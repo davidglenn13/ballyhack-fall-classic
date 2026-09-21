@@ -169,10 +169,13 @@
       note.textContent=fmt===N55
         ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16–18 repeat the pairing order.'
         :`${fmt} is active only for this foursome.`;
-      pairings.innerHTML='<b>Pairings</b>'+segmentsFor(r,g).map(seg=>{
+      const pairingSegments=segmentsFor(r,g);
+      const pairingRows=(fmt===N55?pairingSegments.slice(0,3):pairingSegments).map(seg=>{
         const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
         return `<span>${seg.label}: ${teams[0].map(n=>n.split(' ')[0]).join(' / ')} vs ${teams[1].map(n=>n.split(' ')[0]).join(' / ')}</span>`;
-      }).join('');
+      });
+      if(fmt===N55)pairingRows.push('<span>Holes 16–18: Repeat the pairing order</span>');
+      pairings.innerHTML='<b>Pairings</b>'+pairingRows.join('');
     }else{
       note.textContent='Either Nassau format can be selected independently by each foursome.';
       pairings.textContent='';
