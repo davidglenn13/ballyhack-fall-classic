@@ -11,6 +11,42 @@ const ROUNDS=[
 ];
 const key='ballyhack-fall-classic-2026-v2';
 const API='/api/secure-state';
+const pendingSyncKey='ballyhack-pending-sync-v1';
+let syncUi={status:'saved',message:'Saved'};
+let pendingSync=JSON.parse(localStorage.getItem(pendingSyncKey)||'[]');
+
+function setSyncUi(status,message){
+  syncUi={status,message};
+  document.querySelectorAll('[data-sync-status]').forEach(el=>{
+    el.className='score-sync score-sync-'+status;
+    el.textContent=message;
+  });
+}
+
+function queuePendingSync(payload){
+  pendingSync.push(payload);
+  localStorage.setItem(pendingSyncKey,JSON.stringify(pendingSync.slice(-100)));
+}
+
+async function flushPendingSync(){
+  if(!navigator.onLine||!pendingSync.length)return;
+  const queued=[...pendingSync];
+  pendingSync=[];
+  localStorage.setItem(pendingSyncKey,'[]');
+  for(const payload of queued){
+    const ok=await apiPost(payload,{queueOnFailure:false,quiet:true});
+    if(!ok){
+      queuePendingSync(payload);
+      break;
+    }
+  }
+}
+
+window.addEventListener('online',()=>{
+  setSyncUi('saving','Back online · syncing…');
+  flushPendingSync();
+});
+window.addEventListener('offline',()=>setSyncUi('offline','Offline · saved on this phone'));
 
 let state=JSON.parse(localStorage.getItem(key)||'null')||{
   scores:{},
@@ -30,7 +66,9 @@ function save(){
   localStorage.setItem(key,JSON.stringify(state))
 }
 
-async function apiPost(payload){
+async function apiPost(payload,opts={}){
+  const {queueOnFailure=true,quiet=false}=opts;
+  if(!quiet)setSyncUi('saving','Saving…');
   try{
     const r=await fetch(API,{
       method:'POST',
@@ -38,9 +76,13 @@ async function apiPost(payload){
       body:JSON.stringify(payload)
     });
     if(!r.ok)throw new Error('API '+r.status);
-    return await r.json()
+    const result=await r.json();
+    if(!quiet)setSyncUi('saved','Saved');
+    return result
   }catch(e){
     console.warn('Shared sync unavailable',e);
+    if(queueOnFailure)queuePendingSync(payload);
+    if(!quiet)setSyncUi('offline',navigator.onLine?'Couldn’t sync · will retry':'Offline · saved on this phone');
     return null
   }
 }
@@ -69,6 +111,7 @@ async function loadShared(){
     };
 
     save();
+    if(navigator.onLine)flushPendingSync();
     return true
   }catch(e){
     console.warn('Using local fallback',e);
@@ -675,7 +718,9 @@ function score(){
           </div>
         </div>
 
-        <input
+        <div class="score-entry">
+          <span class="score-entry-label">GROSS</span>
+          <input
           class="score-input"
           inputmode="numeric"
           type="number"
@@ -685,18 +730,19 @@ function score(){
           data-score-player="${n}"
           data-hole="${h}"
           aria-label="${n} gross score hole ${h}"
-        >
+          >
+        </div>
 
         <div class="score-result">
           ${g
-            ?`Stableford Points: <b>${pts}</b>`
-            :'Enter gross'}
+            ?`<span class="net-score">NET <b>${g-st}</b></span><span class="score-dot">·</span><span>POINTS <b>${pts}</b></span>`
+            :'<span class="net-score">NET —</span><span class="score-dot">·</span><span>POINTS —</span>'}
         </div>
 
         <div class="round-running">
           ${g
-            ?`Net to Par: <b>${formatToPar((g-st)-par)}</b>`
-            :'Net to Par: —'}
+            ?`To par <b>${formatToPar((g-st)-par)}</b>`
+            :'Enter gross score'}
         </div>
       </div>
     `;
@@ -718,6 +764,13 @@ function score(){
         <div class="live-badge">
           LIVE SCORING
         </div>
+      </div>
+
+      <div class="score-context" aria-label="Current scoring context">
+        <div><span>ROUND</span><b>${r}</b><small>${rd.name.replace(/^Round \\d+ · /,'')}</small></div>
+        <div><span>GROUP</span><b>${group===1?'1ST':'2ND'}</b><small>${group===1?'First Group':'Second Group'}</small></div>
+        <div><span>HOLE</span><b>${h}</b><small>Par ${par}</small></div>
+        <div class="score-sync score-sync-${syncUi.status}" data-sync-status>${syncUi.message}</div>
       </div>
 
       <div class="score-controls">
@@ -815,7 +868,7 @@ function score(){
           </div>
 
           <div class="hole-meta">
-            Par ${par} · Stroke Index ${si}
+            Par ${par} · Handicap ${si}
           </div>
         </div>
 
@@ -1497,26 +1550,36 @@ function bind(){
     });
 
   document.querySelectorAll('[data-score-player]')
-    .forEach(x=>x.addEventListener('change',e=>{
+    .forEach(x=>x.addEventListener('change',async e=>{
       let r=+(sessionStorage.r||1);
       let n=e.target.dataset.scorePlayer;
+      const h=+e.target.dataset.hole;
+      const raw=e.target.value.trim();
+      const gross=Number(raw);
+
+      if(raw===''||!Number.isInteger(gross)||gross<1||gross>12){
+        e.target.setCustomValidity('Enter a whole-number gross score from 1 to 12.');
+        e.target.reportValidity();
+        return;
+      }
+      e.target.setCustomValidity('');
+
       const wasComplete=roundFullyEntered(r);
 
       state.scores[r]??={};
       state.scores[r][n]??={};
-      const expectedGross=Number(state.scores[r][n][e.target.dataset.hole]||0);
+      const expectedGross=Number(state.scores[r][n][h]||0);
 
-      state.scores[r][n][e.target.dataset.hole]=
-        e.target.value;
-
+      state.scores[r][n][h]=gross;
       save();
+      setSyncUi('saving','Saving…');
 
-      apiPost({
+      const result=await apiPost({
         op:'score',
         round:r,
         player:n,
-        hole:+e.target.dataset.hole,
-        gross:+e.target.value,
+        hole:h,
+        gross,
         expectedGross
       });
 
@@ -1531,6 +1594,7 @@ function bind(){
       }
 
       render();
+      if(result)setSyncUi('saved','Saved');
     }));
 
   const goHole=d=>{
