@@ -160,43 +160,25 @@
     const displayed=sel.value;
     const isNassau=displayed===N55||displayed===N66||displayed===LEGACY_N55;
     if(isNassau&&picker){
-      picker.style.display='grid';
-      picker.style.gridTemplateColumns='minmax(0,1fr)';
+      const setup=sel.closest('div')||picker;
+      picker.style.display='block';
       picker.style.width='100%';
       picker.style.maxWidth='100%';
       picker.style.minWidth='0';
       picker.style.boxSizing='border-box';
-      const setup=sel.closest('div');
-      if(setup){
-        setup.style.gridColumn='1';
-        setup.style.width='100%';
-        setup.style.maxWidth='100%';
-        setup.style.minWidth='0';
-        setup.style.boxSizing='border-box';
-      }
-      const resultsButton=picker.querySelector('[data-view-side-results]');
-      if(resultsButton){
-        resultsButton.style.gridColumn='1';
-        resultsButton.style.width='100%';
-        resultsButton.style.maxWidth='100%';
-        resultsButton.style.minWidth='0';
-        resultsButton.style.boxSizing='border-box';
-        resultsButton.style.order='3';
-      }
-      let row=picker.querySelector(':scope > .side-game-wager-row');
-      if(!row){
-        row=document.createElement('div');
-        row.className='side-game-wager-row';
-        picker.appendChild(row);
-      }
-      row.style.gridColumn='1';
-      row.style.order='2';
-      row.style.width='100%';
-      row.style.maxWidth='100%';
-      row.style.minWidth='0';
-      row.style.boxSizing='border-box';
+
       let wager=picker.querySelector('.nlp-wager');
-      if(wager&&wager.parentElement!==row)row.appendChild(wager);
+      const strayRow=picker.querySelector(':scope > .side-game-wager-row');
+      if(wager&&wager.parentElement!==setup)setup.appendChild(wager);
+      if(strayRow)strayRow.remove();
+
+      if(!wager){
+        const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0};
+        const value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?Number(bet.value||0):0;
+        setup.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
+        wager=setup.querySelector('.nlp-wager');
+      }
+
       if(wager){
         wager.style.display='block';
         wager.style.width='100%';
@@ -212,37 +194,26 @@
         }
         const input=wager.querySelector('[data-nlp-wager]');
         if(input){
-          input.style.width='auto';
+          input.style.width='0';
           input.style.maxWidth='100%';
           input.style.minWidth='0';
           input.style.flex='1 1 0';
           input.style.boxSizing='border-box';
         }
       }
-      if(!wager){
-        const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0};
-        const value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?Number(bet.value||0):0;
-        row.innerHTML=`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`;
-        wager=row.querySelector('.nlp-wager');
-        wager.style.display='block';
-        wager.style.width='100%';
-        wager.style.maxWidth='100%';
-        wager.style.minWidth='0';
-        wager.style.boxSizing='border-box';
-        const entry=wager.querySelector('.wager-entry');
-        entry.style.width='100%';
-        entry.style.maxWidth='100%';
-        entry.style.minWidth='0';
-        entry.style.boxSizing='border-box';
-        const input=wager.querySelector('[data-nlp-wager]');
-        input.style.width='auto';
-        input.style.maxWidth='100%';
-        input.style.minWidth='0';
-        input.style.flex='1 1 0';
-        input.style.boxSizing='border-box';
+
+      const resultsButton=picker.querySelector('[data-view-side-results]');
+      if(resultsButton&&resultsButton.parentElement!==setup)setup.appendChild(resultsButton);
+      if(resultsButton){
+        resultsButton.style.display='block';
+        resultsButton.style.width='100%';
+        resultsButton.style.maxWidth='100%';
+        resultsButton.style.marginTop='12px';
+        resultsButton.style.boxSizing='border-box';
       }
     }else{
       picker?.querySelector('.side-game-wager-row')?.remove();
+      picker?.querySelector('.nlp-wager')?.remove();
     }
     const eyebrow=picker?.querySelector('.eyebrow');
     if(eyebrow) eyebrow.textContent=(state.sideGames?.[r]===FORTY)?'SIDE GAME FOR THIS ROUND':'SIDE GAME FOR THIS GROUP';
