@@ -99,6 +99,13 @@
   async function handleScoreGameChange(select){
     const r=roundNo(), g=groupNo(), value=select.value;
     const previous=displayGameForScore(r,g);
+    const switchingNassau=(previous===N55||previous===N66||previous===LEGACY_N55)&&(value===N55||value===N66)&&value!==previous;
+    const groupHasScores=roundGroupNames(r,g).some(n=>Object.values(state.scores?.[r]?.[n]||{}).some(v=>+v>0));
+    if(switchingNassau&&groupHasScores){
+      select.value=previous===LEGACY_N55?N55:previous;
+      alert('The Nassau format is locked once scoring has started. To use a different Nassau format, change it before entering the first score.');
+      return;
+    }
     try{
       // The selected game is the authoritative action. Save that first so
       // cleanup of old wagers/config cannot block or revert the selection.
