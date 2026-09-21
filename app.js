@@ -1762,14 +1762,18 @@ sideStyle.textContent=`
 }
 
 .side-game-picker>.side-game-wager-row{
-  flex:0 0 100%;
+  flex:1 1 100%;
   width:100%;
-  min-width:100%
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box
 }
 
 .side-game-picker>.side-game-wager-row .nlp-wager{
   width:100%;
-  box-sizing:border-box
+  max-width:100%;
+  box-sizing:border-box;
+  min-width:0
 }
 
 .side-game-picker select{
@@ -1809,6 +1813,10 @@ sideStyle.textContent=`
   display:flex;
   align-items:center;
   gap:8px;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
   padding:0 12px;
   border:1px solid var(--line);
   border-radius:8px;
@@ -1822,9 +1830,11 @@ sideStyle.textContent=`
 }
 
 .side-game-picker .wager-entry input{
-  flex:1;
+  flex:1 1 0;
   min-width:0;
-  width:100%;
+  width:auto;
+  max-width:100%;
+  box-sizing:border-box;
   padding:10px 0;
   border:0;
   outline:0;
