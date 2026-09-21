@@ -343,6 +343,13 @@ async function handle(context){
       const round=Number(body.round),group=Number(body.group);if(!inGroup(round,group,actor.player)&&actor.role!=='admin')return json({error:'You can only confirm your own foursome'},403);
       const names=GROUPS[round]?.[group]||[],count=await db.prepare('SELECT COUNT(*) AS count FROM tournament_scores WHERE round_no=? AND player IN (?,?,?,?)').bind(round,...names).first();
       if(Number(count.count)!==72)return json({error:`Cannot lock: ${72-Number(count.count)} scores are still missing`},409);
+      const games=await setting(db,'sideGames',{});
+      if((games[round]??games[String(round)]??'None')==='40 Ball'){
+        const selections=await setting(db,'fortyBallSelections',{});
+        const groupSelections=selections?.[round]?.[group]??selections?.[String(round)]?.[String(group)]??{};
+        const selectedCount=Object.values(groupSelections).filter(Boolean).length;
+        if(selectedCount!==40)return json({error:`Cannot lock: 40 Ball has ${selectedCount} of 40 counted scores`},409);
+      }
       await createBackup(db,`Before Round ${round} Group ${group} lock`,actor.player,true);
       await db.prepare('INSERT OR IGNORE INTO tournament_group_locks (round_no,group_no,locked_by,locked_at) VALUES (?,?,?,?)').bind(round,group,actor.player,now()).run();
       await activity(db,actor.player,'Scorecard locked',`Round ${round}, Group ${group}`);
