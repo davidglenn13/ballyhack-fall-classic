@@ -152,7 +152,7 @@
     card.insertAdjacentHTML('beforeend',roundCashBlock(r));
   }
 
-  function ledgerHtml(title='Cumulative Side Bet Settlement'){
+  function ledgerHtml(title='Cumulative Side Bets'){
     const net=totalSideNet(),pay=payments(net);
     const any=Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
     const wagerRounds=[1,2,3,4].filter(r=>{
@@ -161,7 +161,7 @@
     });
     const final=any&&wagerRounds.every(r=>typeof roundFullyEntered==='function'&&roundFullyEntered(r));
     const statusClass=final?'is-final':'is-live';
-    const statusText=final?'SETTLEMENT COMPLETE':'LIVE SETTLEMENT';
+    const statusText=final?'COMPLETE':'LIVE';
     const summary=pay.length
       ?pay.map(x=>`<div class="sbc-final-pay"><div><b>${x.from}</b><span> pays </span><b>${x.to}</b></div><strong>${money(x.amount)}</strong></div>`).join('')
       :`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Completed results will populate here automatically.'}</p>`;
@@ -178,7 +178,7 @@
       <div class="sbc-final-panel">
         <div class="sbc-final-title">
           <div>
-            <div class="eyebrow">FINAL SETTLEMENT</div>
+            <div class="eyebrow">PAYMENTS</div>
             <h3>Who Pays Who</h3>
           </div>
           <span>${final?'All wagered rounds complete':''}</span>
