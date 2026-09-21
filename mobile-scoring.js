@@ -60,6 +60,18 @@
     }
 
     picker.classList.add('mobile-game-saved');
+    const pairingSource=picker.querySelector('.nassau-pairing-note');
+    let persistentPairings=picker.querySelector('.mobile-game-pairings');
+    if(pairingSource&&pairingSource.textContent.trim()){
+      if(!persistentPairings){
+        persistentPairings=document.createElement('div');
+        persistentPairings.className='mobile-game-pairings';
+        picker.appendChild(persistentPairings);
+      }
+      persistentPairings.innerHTML=pairingSource.innerHTML;
+    }else{
+      persistentPairings?.remove();
+    }
     if(picker.querySelector('.mobile-game-summary'))return;
     const summary=document.createElement('div');
     summary.className='mobile-game-summary';
