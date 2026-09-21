@@ -99,13 +99,6 @@
   async function handleScoreGameChange(select){
     const r=roundNo(), g=groupNo(), value=select.value;
     const previous=displayGameForScore(r,g);
-    const switchingNassau=(previous===N55||previous===N66||previous===LEGACY_N55)&&(value===N55||value===N66)&&value!==previous;
-    const groupHasScores=roundGroupNames(r,g).some(n=>Object.values(state.scores?.[r]?.[n]||{}).some(v=>+v>0));
-    if(switchingNassau&&groupHasScores){
-      select.value=previous===LEGACY_N55?N55:previous;
-      alert('The Nassau format is locked once scoring has started. To use a different Nassau format, change it before entering the first score.');
-      return;
-    }
     try{
       // The selected game is the authoritative action. Save that first so
       // cleanup of old wagers/config cannot block or revert the selection.
@@ -195,17 +188,6 @@
       note.textContent='Either Nassau format can be selected independently by each foursome.';
       pairings.textContent='';
     }
-
-    const selected=sel.value;
-    const isNassau=selected===N55||selected===N66||selected===LEGACY_N55;
-    const picker=sel.closest('.side-game-picker');
-    if(isNassau&&picker&&!picker.querySelector('.nlp-wager')){
-      const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0};
-      const value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?Number(bet.value||0):0;
-      const host=sel.closest('div')||picker;
-      host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
-    }
-    if(!isNassau)picker?.querySelector('.nlp-wager')?.remove();
   }
 
   function nassauPanel(r,g){
