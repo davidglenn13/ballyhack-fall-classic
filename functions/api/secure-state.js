@@ -253,10 +253,18 @@ async function baseOperation(db,body,actor){
     const round=Number(body.round);
     if(!GROUPS[round]||!['None','40 Ball','Nassau 5-5-5-1-1-1','Nassau 5-5-5-3','Nassau 6-6-6'].includes(body.value))return json({error:'Invalid side game'},400);
     if(await isLocked(db,round,1)||await isLocked(db,round,2))return json({error:'Unlock both scorecards before changing the side game'},423);
+    const beforeGames=await setting(db,'sideGames',{});
+    const before=beforeGames[round]??beforeGames[String(round)]??'None';
     if(actor?.role!=='admin'&&(hasScores(GROUPS[round][1],await groupScores(db,round,1))||hasScores(GROUPS[round][2],await groupScores(db,round,2)))){
-      const current=await setting(db,'sideGames',{});if(current[round]!==body.value)return json({error:'Ask the commissioner to change the side game after scoring begins'},409);
+      if(before!==body.value)return json({error:'Ask the commissioner to change the side game after scoring begins'},409);
     }
-    return modifySetting(db,'sideGames',body.expectedRevision,current=>{current[String(round)]=body.value;return current});
+    const result=await modifySetting(db,'sideGames',body.expectedRevision,current=>{current[String(round)]=body.value;return current});
+    if(!result.ok)return result;
+    if(body.value==='None'||(before==='None'&&body.value==='40 Ball')){
+      const cleared=await mutateServerSetting(db,'fortyBallSelections',current=>{delete current[String(round)];return current});
+      if(!cleared.ok)return cleared;
+    }
+    return result;
   }else if(op==='nassauGroup'){
     const round=Number(body.round),group=Number(body.group);if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid Nassau group'},400);
     if(body.value&& !['Nassau 6-6-6','Nassau 5-5-5-1-1-1','Nassau 5-5-5-3'].includes(body.value))return json({error:'Invalid Nassau format'},400);
