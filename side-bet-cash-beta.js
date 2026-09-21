@@ -201,7 +201,8 @@
       <div class="sbc-net">${PLAYERS.map(p=>{
         const v=net[p.name]||0;
         const label=v>0?'RECEIVES':v<0?'OWES':'EVEN';
-        return `<div class="${v>0?'net-positive':v<0?'net-negative':'net-even'}"><span><b>${p.name}</b><small>${label}</small></span><strong>${money(Math.abs(v))}</strong></div>`;
+        const amount=v<0?`-${money(Math.abs(v))}`:money(Math.abs(v));
+        return `<div class="${v>0?'net-positive':v<0?'net-negative':'net-even'}"><span><b>${p.name}</b><small>${label}</small></span><strong>${amount}</strong></div>`;
       }).join('')}</div>
     </section>`;
   }
