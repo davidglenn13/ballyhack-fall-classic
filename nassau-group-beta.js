@@ -156,14 +156,26 @@
       note.className='nassau-group-note';
       sel.insertAdjacentElement('afterend',note);
     }
+    let pairings=sel.closest('.side-game-picker')?.querySelector('.nassau-pairing-note');
+    if(!pairings){
+      pairings=document.createElement('div');
+      pairings.className='nassau-pairing-note';
+      note.insertAdjacentElement('afterend',pairings);
+    }
     if(state.sideGames?.[r]===FORTY){
       note.textContent='40 Ball applies to both groups for the round.';
+      pairings.textContent='';
     }else if(state.sideGames?.[r]!=='None'&&fmt){
       note.textContent=fmt===N55
         ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16, 17 and 18 are separate one-hole matches.'
         :`${fmt} is active only for this foursome.`;
+      pairings.innerHTML='<b>Pairings</b>'+segmentsFor(r,g).map(seg=>{
+        const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
+        return `<span>${seg.label}: ${teams[0].map(n=>n.split(' ')[0]).join(' / ')} vs ${teams[1].map(n=>n.split(' ')[0]).join(' / ')}</span>`;
+      }).join('');
     }else{
       note.textContent='Either Nassau format can be selected independently by each foursome.';
+      pairings.textContent='';
     }
   }
 
@@ -256,7 +268,7 @@
   function ensureStyle(){
     if(document.getElementById('nassau-group-style'))return;
     const st=document.createElement('style');st.id='nassau-group-style';st.textContent=`
-      .nassau-group-note{margin-top:6px;font-size:11px;color:var(--muted);font-weight:700}
+      .nassau-group-note{margin-top:6px;font-size:11px;color:var(--muted);font-weight:700}.nassau-pairing-note{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.4;color:var(--muted)}.nassau-pairing-note b{display:block;margin-bottom:3px;color:var(--navy);font-size:10px;text-transform:uppercase;letter-spacing:.05em}.nassau-pairing-note span{display:block}
       .saved-side-results{margin-top:18px;padding-top:16px;border-top:2px solid var(--line)}
       .saved-side-results h3{margin:3px 0 10px}
       .saved-side-entry{display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--line)}
