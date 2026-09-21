@@ -91,10 +91,10 @@
       b=document.createElement('button');
       b.dataset.tab=TAB;
       b.textContent=TAB;
-      nav.appendChild(b);
-    }else{
-      nav.appendChild(b); // keep Gross Scores as far-right tab
     }
+    const side=nav.querySelector('button[data-tab="Side Games"]');
+    if(side)nav.insertBefore(b,side);
+    else nav.appendChild(b);
   }
 
   function closeDetail(){
