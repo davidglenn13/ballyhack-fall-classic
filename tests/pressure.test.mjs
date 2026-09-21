@@ -128,6 +128,12 @@ test('pressure: concurrent 40 Ball selections stop exactly at 40 counted scores'
   assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
 
   const names=GROUPS[1][1];
+  for(const player of names){
+    for(let hole=1;hole<=18;hole++){
+      const seeded=await x.post('David Glenn',{op:'score',round:1,player,hole,gross:5,expectedGross:0,mutationId:`seed40-${player}-${hole}`});
+      assert.equal(seeded.status,200,seeded.body.error);
+    }
+  }
   let count=0;
   outer:
   for(const player of names){
@@ -167,7 +173,12 @@ test('pressure: locks are isolated by round and group',async()=>{
   await x.login('Tyler Bohannon');
 
   const r1player=GROUPS[1][1][0];
-  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:r1player,hole:1,gross:5,expectedGross:0,mutationId:'lock-seed'})).status,200);
+  for(const player of GROUPS[1][1]){
+    for(let hole=1;hole<=18;hole++){
+      const seeded=await x.post('David Glenn',{op:'score',round:1,player,hole,gross:5,expectedGross:0,mutationId:`lock-seed-${player}-${hole}`});
+      assert.equal(seeded.status,200,seeded.body.error);
+    }
+  }
   assert.equal((await x.post('David Glenn',{op:'lockGroup',round:1,group:1})).status,200);
 
   const blocked=await x.post('David Glenn',{op:'score',round:1,player:r1player,hole:2,gross:5,expectedGross:0,mutationId:'locked-r1'});
