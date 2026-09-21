@@ -1978,12 +1978,45 @@ sideStyle.textContent=`
 @media(max-width:760px){
 
   .side-game-picker{
-    align-items:stretch;
-    flex-direction:column
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    align-items:stretch!important;
+    flex-direction:column;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important
+  }
+
+  .side-game-picker>*{
+    grid-column:1!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important
+  }
+
+  .side-game-picker .nlp-wager,
+  .side-game-picker .side-game-wager-row,
+  .side-game-picker .wager-entry,
+  .side-game-picker [data-nlp-wager]{
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important
+  }
+
+  .side-game-picker .wager-entry{
+    width:100%!important
+  }
+
+  .side-game-picker [data-nlp-wager]{
+    width:0!important;
+    flex:1 1 0!important
   }
 
   .side-game-picker button{
-    width:100%
+    width:100%!important
   }
 
   .side-head{
