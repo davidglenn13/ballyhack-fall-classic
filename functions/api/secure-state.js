@@ -315,40 +315,6 @@ async function handle(context){
   try{
     await ensureActivity(db);
 
-    // One-time full beta clean slate requested before final review.
-    // Clears every tournament row, including player PINs/sessions, photos/setup,
-    // scores, wagers, locks, backups, audit/activity history, and test metadata.
-    const resetMarker='2026-09-21T20:32-full-beta-reset-v1';
-    const currentMarker=await setting(db,'betaFullResetMarker',null);
-    const resetHost=new URL(request.url).hostname.toLowerCase();
-    const allowFullBetaReset=resetHost.endsWith('.pages.dev');
-    if(allowFullBetaReset&&currentMarker!==resetMarker){
-      await loginAttempts(db);
-      await loginSessions(db);
-      await db.batch([
-        db.prepare('DELETE FROM tournament_scores'),
-        db.prepare('DELETE FROM tournament_players'),
-        db.prepare('DELETE FROM tournament_settings'),
-        db.prepare('DELETE FROM tournament_charges'),
-        db.prepare('DELETE FROM tournament_credentials'),
-        db.prepare('DELETE FROM tournament_score_audit'),
-        db.prepare('DELETE FROM tournament_group_locks'),
-        db.prepare('DELETE FROM tournament_backups'),
-        db.prepare('DELETE FROM tournament_activity'),
-        db.prepare('DELETE FROM tournament_login_attempts'),
-        db.prepare('DELETE FROM tournament_login_sessions')
-      ]);
-      await putSetting(db,'sideGames',{1:'None',2:'None',3:'None',4:'None'});
-      await putSetting(db,'fortyBallSelections',{});
-      await putSetting(db,'fortyBallBets',{});
-      await putSetting(db,'nassauGroups',{});
-      await putSetting(db,'nassauBets',{});
-      await putSetting(db,'unlockRequests',{});
-      await putSetting(db,'frozen',false);
-      await putSetting(db,'epoch',randomHex(12));
-      await putSetting(db,'betaFullResetMarker',resetMarker);
-    }
-
     if(request.method==='GET'){
       const out=await snapshot(db),actor=await authenticate(db,request);
       if(actor?.role!=='admin'){
