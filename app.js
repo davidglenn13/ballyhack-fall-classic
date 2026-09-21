@@ -1745,7 +1745,6 @@ const sideStyle=document.createElement('style');
 sideStyle.textContent=`
 .side-game-picker{
   display:flex;
-  flex-wrap:wrap;
   gap:12px;
   align-items:end;
   justify-content:space-between;
@@ -1758,21 +1757,6 @@ sideStyle.textContent=`
 
 .side-game-picker>div{
   flex:1;
-  min-width:0
-}
-
-.side-game-picker>.side-game-wager-row{
-  flex:1 1 100%;
-  width:100%;
-  min-width:0;
-  max-width:100%;
-  box-sizing:border-box
-}
-
-.side-game-picker>.side-game-wager-row .nlp-wager{
-  width:100%;
-  max-width:100%;
-  box-sizing:border-box;
   min-width:0
 }
 
@@ -1813,10 +1797,6 @@ sideStyle.textContent=`
   display:flex;
   align-items:center;
   gap:8px;
-  width:100%;
-  max-width:100%;
-  min-width:0;
-  box-sizing:border-box;
   padding:0 12px;
   border:1px solid var(--line);
   border-radius:8px;
@@ -1830,11 +1810,9 @@ sideStyle.textContent=`
 }
 
 .side-game-picker .wager-entry input{
-  flex:1 1 0;
+  flex:1;
   min-width:0;
-  width:auto;
-  max-width:100%;
-  box-sizing:border-box;
+  width:100%;
   padding:10px 0;
   border:0;
   outline:0;
@@ -1978,52 +1956,12 @@ sideStyle.textContent=`
 @media(max-width:760px){
 
   .side-game-picker{
-    display:grid!important;
-    grid-template-columns:minmax(0,1fr)!important;
-    align-items:stretch!important;
-    flex-direction:column;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    overflow:hidden!important;
-    box-sizing:border-box!important
+    align-items:stretch;
+    flex-direction:column
   }
 
-  .side-game-picker>*{
-    grid-column:1!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    box-sizing:border-box!important
-  }
-
-  .side-game-picker .nlp-wager,
-  .side-game-picker .side-game-wager-row,
-  .side-game-picker .wager-entry,
-  .side-game-picker [data-nlp-wager]{
-    max-width:100%!important;
-    min-width:0!important;
-    box-sizing:border-box!important
-  }
-
-  .side-game-picker .wager-entry{
-    width:100%!important
-  }
-
-  .side-game-picker [data-nlp-wager]{
-    width:0!important;
-    flex:1 1 0!important
-  }
-
-  .side-game-picker button:not(.mobile-game-edit){
-    width:100%!important
-  }
-
-  .side-game-picker .mobile-game-edit{
-    width:auto!important;
-    max-width:none!important;
-    min-width:72px!important;
-    flex:0 0 auto!important
+  .side-game-picker button{
+    width:100%
   }
 
   .side-head{
