@@ -54,7 +54,12 @@ test('Nassau press and counter-press are validated on the server',async()=>{
   const original={id:'press-one',segment:0,fromHole:2,pressedBy:'a',amount:20,parentPressId:null};
   assert.equal((await x.post('Bill McCombs',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[original]}})).status,409,'Opposing team may not place the first press');
   assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[original]}})).status,200);
-  const counter={id:'counter-one',segment:0,fromHole:2,pressedBy:'b',amount:20,parentPressId:'press-one'};
+  const tooEarlyCounter={id:'counter-early',segment:0,fromHole:2,pressedBy:'b',amount:20,parentPressId:'press-one'};
+  assert.equal((await x.post('Bill McCombs',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[original,tooEarlyCounter]}})).status,409,'Pressed team may not counter until it is losing the original press');
+  for(const [player,gross] of [['David Glenn',4],['Nick Condeni',4],['Bill McCombs',6],['Will Long',6]]){
+    assert.equal((await x.post('David Glenn',{op:'score',round:1,player,hole:2,gross,expectedGross:0,mutationId:'press-hole-'+player})).status,200);
+  }
+  const counter={id:'counter-one',segment:0,fromHole:3,pressedBy:'b',amount:20,parentPressId:'press-one'};
   assert.equal((await x.post('Bill McCombs',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[original,counter]}})).status,200);
   assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[original,counter,{...counter,id:'counter-two'}]}})).status,409);
   x.sqlite.prepare("INSERT INTO tournament_group_locks VALUES (1,1,'David Glenn','2026-09-16T00:00:00Z')").run();
@@ -91,10 +96,13 @@ test('Complete Nassau match keeps separate presses through lock, unlock, and cor
   await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:30,presses:[]}});
   for(const n of GROUPS[1][1])await x.post('David Glenn',{op:'score',round:1,player:n,hole:1,gross:n==='David Glenn'||n==='Nick Condeni'?6:4,expectedGross:0,mutationId:`start-${n}`});
   const original={id:'press-a',segment:0,fromHole:2,pressedBy:'a',amount:30,parentPressId:null};
-  const counter={id:'press-b',segment:0,fromHole:2,pressedBy:'b',amount:30,parentPressId:'press-a'};
   assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:30,presses:[original]}})).status,200);
+  for(const [player,gross] of [['David Glenn',4],['Nick Condeni',4],['Bill McCombs',6],['Will Long',6]]){
+    assert.equal((await x.post('David Glenn',{op:'score',round:1,player,hole:2,gross,expectedGross:0,mutationId:'press-two-'+player})).status,200);
+  }
+  const counter={id:'press-b',segment:0,fromHole:3,pressedBy:'b',amount:30,parentPressId:'press-a'};
   assert.equal((await x.post('Bill McCombs',{op:'nassauBetConfig',round:1,group:1,config:{value:30,presses:[original,counter]}})).status,200);
-  for(const n of GROUPS[1][1])for(let h=2;h<=18;h++){
+  for(const n of GROUPS[1][1])for(let h=3;h<=18;h++){
     const out=await x.post('David Glenn',{op:'score',round:1,player:n,hole:h,gross:5,expectedGross:0,mutationId:`finish-${n}-${h}`});
     assert.equal(out.status,200,out.body.error);
   }
