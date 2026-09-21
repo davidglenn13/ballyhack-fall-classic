@@ -33,6 +33,7 @@
     cfg.presses.forEach(p=>apply(pressOutcome(r,g,p),p.amount));return net;
   }
   function totalNet(){const n=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));for(let r=1;r<=4;r++)for(let g=1;g<=2;g++)Object.entries(groupNet(r,g)).forEach(([k,v])=>n[k]+=v);return n;}
+  window.nassauCashNetForGroup=groupNet;
   function payments(net){const cr=[],db=[];Object.entries(net).forEach(([name,v])=>{const c=Math.round(v*100);if(c>0)cr.push({name,c});if(c<0)db.push({name,c:-c})});cr.sort((a,b)=>b.c-a.c);db.sort((a,b)=>b.c-a.c);const out=[];let i=0,j=0;while(i<db.length&&j<cr.length){const c=Math.min(db[i].c,cr[j].c);out.push({from:db[i].name,to:cr[j].name,amount:c/100});db[i].c-=c;cr[j].c-=c;if(!db[i].c)i++;if(!cr[j].c)j++;}return out;}
 
   function pressList(r,g,si){
