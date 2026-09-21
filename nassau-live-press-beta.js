@@ -187,10 +187,21 @@
 
     const overallHtml=`<section class="card nlp-overall-card"><div class="eyebrow">NASSAU MATCH</div><h2>Overall Match</h2><div class="nlp-overall"><span>Standing</span><b>${overallMatchText(viewedStanding,teams)}</b></div></section>`;
     const pressHtml=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Press Wagers</h2><p class="muted">Each press is a separate wager from its starting hole through the end of ${seg.label}.</p><div class="nlp-wagers">${cards.length?cards.join(''):`<div class="nlp-empty">${emptyMessage}</div>`}</div>${!c.value?'<p class="notice" data-nlp-hint>Set Wager Amount in the Side Game selection above to activate Press.</p>':''}</section>`;
-    const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
-    scoreCard?.insertAdjacentHTML('afterend',overallHtml+pressHtml);
-    const pressCard=app.querySelector('.nlp-card');
-    moveSelectedPicker(r,g,pressCard);
+    const scoreCard=scoreSide.closest('.scoring-card')||scoreSide.closest('.card')||app.querySelector('.card');
+    if(scoreCard){
+      scoreCard.insertAdjacentHTML('beforeend',overallHtml+pressHtml);
+      const overallCard=scoreCard.querySelector('.nlp-overall-card');
+      const pressCard=scoreCard.querySelector('.nlp-card');
+      if(overallCard)overallCard.style.order='7';
+      if(pressCard)pressCard.style.order='8';
+      const picker=scoreCard.querySelector('.side-game-picker')||document.querySelector('.side-game-picker-detached');
+      if(picker&&c.value&&typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)){
+        picker.classList.add('side-game-picker-detached');
+        picker.style.order='9';
+        picker.querySelector('.nlp-wager .wager-next')?.replaceChildren('Wager Set');
+        if(pressCard&&picker.previousElementSibling!==pressCard)pressCard.insertAdjacentElement('afterend',picker);
+      }
+    }
   }
 
   function style(){
@@ -257,6 +268,9 @@
     const original=originalPressInSegment(c,si),counter=counterPressFor(c,original);
     if(original){
       if(counter){alert('The original press has already been pressed back.');render();return;}
+      const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
+      const counterTeam=original.pressedBy==='a'?teams[1]:teams[0];
+      if(!counterTeam.includes(currentUser())){alert('Only the opposing team may Press the Press.');render();return;}
       if(h<+original.fromHole){alert(`Press the Press can start on Hole ${original.fromHole} or a later unplayed hole.`);render();return;}
       if(h!==nextHole){alert(`Press the Press can only start on the next unplayed hole, Hole ${nextHole}.`);render();return;}
       const amount=Math.min(9999,Math.max(0,+c.value||0));if(!amount){alert('Enter the Nassau wager amount first.');return;}
@@ -265,6 +279,8 @@
     if(h===seg.holes[0]){alert(`A press cannot start on the first hole of a Nassau match. The earliest press is Hole ${seg.holes[1]}.`);render();return;}
     if(h!==nextHole){alert(`A press can only be elected on the next unplayed hole, Hole ${nextHole}.`);render();return;}
     const loser=liveStanding(r,g,seg).loser;if(!loser){alert('A press can only be entered by the team currently losing this Nassau match.');render();return;}
+    const teams=nassauTeams(roundGroupNames(r,g),seg.pairing),pressingTeam=loser==='a'?teams[0]:teams[1];
+    if(!pressingTeam.includes(currentUser())){alert('Only the team currently losing this Nassau match may press.');render();return;}
     const amount=Math.min(9999,Math.max(0,+c.value||0));if(!amount){alert('Enter the Nassau wager amount first.');return;}
     c.presses.push({id:`p${Date.now()}${Math.random().toString(36).slice(2,6)}`,segment:si,fromHole:h,pressedBy:loser,amount});persist(r,g).then(()=>render());
   });
