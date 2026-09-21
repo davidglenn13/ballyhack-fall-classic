@@ -171,12 +171,6 @@
     }else if(nextHole!==null&&nextHole!==firstHole){
       cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS</span><h3>${losingTeam?shortTeam(losingTeam):'No team eligible'}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>Current Match</span><b>${viewedStanding.loser?`${shortTeam(viewedStanding.loser==='a'?teams[0]:teams[1])} ${viewedStanding.margin} down`:'All square'}</b></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div>${losingTeam?`<button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press</button>`:''}</div>`);
     }
-    const historicalPresses=c.presses
-      .filter(p=>+p.segment!==si && +p.fromHole<=h)
-      .sort((a,b)=>(+a.fromHole)-(+b.fromHole));
-    if(historicalPresses.length){
-      cards.unshift(...historicalPresses.map(historyCard).filter(Boolean));
-    }
     const statusHtml=`<section class="card nlp-match-status"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Match Status</h2><div class="nlp-overall"><span>Current Standing</span><b>${overallMatchText(viewedStanding,teams)}</b></div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
     if(!cards.length){
