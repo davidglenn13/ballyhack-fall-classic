@@ -1280,8 +1280,8 @@ function trip(){
       <p class="notice">
         40 Ball counts the lowest 40 net scores
         from each foursome's 72 hole scores.
-        Nassau uses rotating two-player teams
-        over 5-5-5-3 hole segments.
+        Nassau uses rotating two-player teams in either
+        5-5-5-1-1-1 or 6-6-6 format.
       </p>
     </section>
   `);
@@ -1405,13 +1405,13 @@ function admin(){
         id="freeze"
       >
         ${state.frozen
-          ?'Unfreeze Demo'
+          ?'Unfreeze Indexes'
           :'Freeze Indexes'}
       </button>
 
       <p class="notice">
         Live tournament data is synchronized through
-        the shared Netlify database.
+        the Cloudflare D1 tournament database.
       </p>
     </section>
   `);
