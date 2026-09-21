@@ -608,7 +608,7 @@ function home(){
 
       <p>
         <b>Blue Ridge:</b>
-        6,170 yards · Par 72 · 71.0 / 146
+        6,187 yards · Par 72 · 71.0 / 146
       </p>
 
       <p>
