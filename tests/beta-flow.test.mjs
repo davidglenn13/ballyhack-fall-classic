@@ -222,6 +222,28 @@ test('40 Ball rejects a 41st counted score for a group',async()=>{
   assert.fail('Expected a 41st 40 Ball selection attempt');
 });
 
+
+test('40 Ball scorecard cannot lock until exactly 40 scores are counted',async()=>{
+  const x=session();await x.login('David Glenn');
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
+  for(const name of GROUPS[1][1])for(let hole=1;hole<=18;hole++){
+    const result=await x.post('David Glenn',{op:'score',round:1,player:name,hole,gross:5,expectedGross:0,mutationId:`lock40-${name}-${hole}`});
+    assert.equal(result.status,200,result.body.error);
+  }
+  const picks=[];
+  for(const name of GROUPS[1][1])for(let hole=1;hole<=18;hole++)picks.push({name,hole});
+  for(const {name,hole} of picks.slice(0,39)){
+    const result=await x.post('David Glenn',{op:'fortyBallSelection',round:1,group:1,player:name,hole,value:true});
+    assert.equal(result.status,200,result.body.error);
+  }
+  const blocked=await x.post('David Glenn',{op:'lockGroup',round:1,group:1});
+  assert.equal(blocked.status,409);
+  assert.match(blocked.body.error,/39 of 40 counted scores/);
+  const last=picks[39];
+  assert.equal((await x.post('David Glenn',{op:'fortyBallSelection',round:1,group:1,player:last.name,hole:last.hole,value:true})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'lockGroup',round:1,group:1})).status,200);
+});
+
 test('Four-round scoring and 40 Ball selections remain available to both groups',async()=>{
   const x=session();await x.login('David Glenn');
   for(let round=1;round<=4;round++){
