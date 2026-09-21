@@ -3,7 +3,9 @@
   const hasNassau=(r,g)=>{
     const grouped=state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)];
     const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)];
-    return !!(grouped||Number(bet?.value||0)>0||(Array.isArray(bet?.presses)&&bet.presses.length));
+    const roundGame=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
+    const roundNassau=roundGame==='Nassau 5-5-5-1-1-1'||roundGame==='Nassau 5-5-5-3'||roundGame==='Nassau 6-6-6';
+    return !!(roundNassau||grouped||Number(bet?.value||0)>0||(Array.isArray(bet?.presses)&&bet.presses.length));
   };
   const segmentsFor=(r,g)=>typeof window.nassauSegmentsFor==='function'?window.nassauSegmentsFor(r,g):NASSAU_SEGMENTS;
   const formatFor=(r,g)=>typeof window.nassauFormatFor==='function'?window.nassauFormatFor(r,g):'Nassau 5-5-5-3';
