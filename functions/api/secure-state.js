@@ -320,7 +320,9 @@ async function handle(context){
     // scores, wagers, locks, backups, audit/activity history, and test metadata.
     const resetMarker='2026-09-21T20:32-full-beta-reset-v1';
     const currentMarker=await setting(db,'betaFullResetMarker',null);
-    if(currentMarker!==resetMarker){
+    const resetHost=new URL(request.url).hostname.toLowerCase();
+    const allowFullBetaReset=resetHost.endsWith('.pages.dev');
+    if(allowFullBetaReset&&currentMarker!==resetMarker){
       await loginAttempts(db);
       await loginSessions(db);
       await db.batch([
