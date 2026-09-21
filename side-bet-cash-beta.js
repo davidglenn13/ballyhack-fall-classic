@@ -181,7 +181,7 @@
             <div class="eyebrow">FINAL SETTLEMENT</div>
             <h3>Who Pays Who</h3>
           </div>
-          <span>${final?'All wagered rounds complete':'Updates automatically as results are completed'}</span>
+          <span>${final?'All wagered rounds complete':''}</span>
         </div>
         ${summary}
       </div>
