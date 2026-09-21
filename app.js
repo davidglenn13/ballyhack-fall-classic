@@ -1745,6 +1745,7 @@ const sideStyle=document.createElement('style');
 sideStyle.textContent=`
 .side-game-picker{
   display:flex;
+  flex-wrap:wrap;
   gap:12px;
   align-items:end;
   justify-content:space-between;
@@ -1758,6 +1759,17 @@ sideStyle.textContent=`
 .side-game-picker>div{
   flex:1;
   min-width:0
+}
+
+.side-game-picker>.side-game-wager-row{
+  flex:0 0 100%;
+  width:100%;
+  min-width:100%
+}
+
+.side-game-picker>.side-game-wager-row .nlp-wager{
+  width:100%;
+  box-sizing:border-box
 }
 
 .side-game-picker select{
