@@ -54,9 +54,14 @@
 
   function nassauGroupNet(r,g){
     const names=roundGroupNames(r,g),net=Object.fromEntries(names.map(n=>[n,0]));
-    const active=!!(state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)]);
-    if(!active)return net;
     const cfg=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0,presses:[]};
+    const active=!!(
+      state.nassauGroups?.[r]?.[g]||
+      state.nassauGroups?.[String(r)]?.[String(g)]||
+      Number(cfg.value||0)>0||
+      (Array.isArray(cfg.presses)&&cfg.presses.length)
+    );
+    if(!active)return net;
     const segs=typeof window.nassauSegmentsFor==='function'?window.nassauSegmentsFor(r,g):NASSAU_SEGMENTS;
     const apply=(o,amt)=>{
       amt=Number(amt||0);
