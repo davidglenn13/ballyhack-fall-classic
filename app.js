@@ -221,6 +221,7 @@ function persistScoreLocation(){
   if(!(round>=1&&round<=4&&group>=1&&group<=2&&hole>=1&&hole<=18))return;
   localStorage.setItem(scoreLocationKey(user),JSON.stringify({
     day:easternDateKey(),
+    epoch:state.epoch??null,
     round,
     group,
     hole
@@ -230,7 +231,7 @@ function persistScoreLocation(){
 function savedScoreLocation(user=currentUser()){
   try{
     const saved=JSON.parse(localStorage.getItem(scoreLocationKey(user))||'null');
-    if(!saved||saved.day!==easternDateKey())return null;
+    if(!saved||saved.day!==easternDateKey()||saved.epoch!==(state.epoch??null))return null;
     const round=+saved.round,group=+saved.group,hole=+saved.hole;
     if(!(round>=1&&round<=4&&group>=1&&group<=2&&hole>=1&&hole<=18))return null;
     if(user!=='David Glenn'&&!roundGroupNames(round,group).includes(user))return null;
