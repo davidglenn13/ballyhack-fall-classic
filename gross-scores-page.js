@@ -46,7 +46,7 @@
           </tbody>
         </table>
       </div>
-      <p class="gross-footnote">Tap any round score to see the full 18-hole gross scorecard. * indicates a round still in progress.</p>`;
+      <p class="gross-footnote">Tap any round score to see the full 18-hole gross scorecard. * Indicates a round still in progress.</p>`;
   }
 
   function detailCard(n,r){
