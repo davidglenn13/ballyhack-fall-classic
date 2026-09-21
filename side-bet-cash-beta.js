@@ -155,7 +155,48 @@
   function ledgerHtml(title='Cumulative Side Bet Settlement'){
     const net=totalSideNet(),pay=payments(net);
     const any=Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
-    return `<section class="card sbc-ledger"><div class="eyebrow">ALL SIDE BETS</div><h2>${title}</h2><p>Nassau base matches, Nassau presses, and 40 Ball wagers are netted across all completed results. This is the running trip-wide cash ledger.</p><div class="sbc-net">${PLAYERS.map(p=>{const v=net[p.name]||0;return `<div><span>${p.name}</span><strong>${v>0?'+':''}${money(v)}</strong></div>`}).join('')}</div><div class="sbc-payment-panel"><h3>Who Pays Who</h3>${pay.length?pay.map(x=>`<div class="sbc-pay"><b>${x.from}</b><span>pays</span><b>${x.to}</b><strong>${money(x.amount)}</strong></div>`).join(''):`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Enter side-game wagers and completed results will populate here automatically.'}</p>`}</div></section>`;
+    const wagerRounds=[1,2,3,4].filter(r=>{
+      if(+state.fortyBallBets?.[r]>0)return true;
+      return Object.values(state.nassauBets?.[r]||{}).some(x=>+x?.value||(x?.presses||[]).length);
+    });
+    const final=any&&wagerRounds.every(r=>typeof roundFullyEntered==='function'&&roundFullyEntered(r));
+    const statusClass=final?'is-final':'is-live';
+    const statusText=final?'SETTLEMENT COMPLETE':'LIVE · ESTIMATED';
+    const summary=pay.length
+      ?pay.map(x=>`<div class="sbc-final-pay"><div><b>${x.from}</b><span> pays </span><b>${x.to}</b></div><strong>${money(x.amount)}</strong></div>`).join('')
+      :`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Enter side-game wagers and completed results will populate here automatically.'}</p>`;
+
+    return `<section class="card sbc-ledger">
+      <div class="sbc-ledger-head">
+        <div>
+          <div class="eyebrow">THE LEDGER</div>
+          <h2>${title}</h2>
+        </div>
+        <span class="sbc-ledger-status ${statusClass}">${statusText}</span>
+      </div>
+
+      <div class="sbc-final-panel">
+        <div class="sbc-final-title">
+          <div>
+            <div class="eyebrow">FINAL SETTLEMENT</div>
+            <h3>Who Pays Who</h3>
+          </div>
+          <span>${final?'All wagered rounds complete':'Updates automatically as results are completed'}</span>
+        </div>
+        ${summary}
+      </div>
+
+      <div class="sbc-detail-head">
+        <h3>Player Net Detail</h3>
+        <p>Nassau base matches, presses, and 40 Ball wagers are netted across all completed results.</p>
+      </div>
+
+      <div class="sbc-net">${PLAYERS.map(p=>{
+        const v=net[p.name]||0;
+        const label=v>0?'RECEIVES':v<0?'OWES':'EVEN';
+        return `<div class="${v>0?'net-positive':v<0?'net-negative':'net-even'}"><span><b>${p.name}</b><small>${label}</small></span><strong>${money(Math.abs(v))}</strong></div>`;
+      }).join('')}</div>
+    </section>`;
   }
 
   function ledgerPage(){
@@ -192,7 +233,12 @@
       .fbw-wager input{width:100%;font-size:16px;font-weight:900}.fbw-readonly b{font-size:14px;color:var(--text)}.fbw-readonly small{font-weight:700}
       .fbw-round-cash{margin-top:18px;padding-top:16px;border-top:2px solid var(--line)}.fbw-round-cash h3{margin:3px 0 8px}.fbw-round-cash h4{margin:14px 0 4px}
       .sbc-net{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 18px}.sbc-net>div{display:flex;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px}.sbc-payment-panel{margin-top:22px;padding:16px;border:1px solid rgba(23,54,93,.20);border-left:5px solid var(--navy);border-radius:12px;background:rgba(23,54,93,.045);box-shadow:0 5px 16px rgba(23,54,93,.06)}.sbc-payment-panel h3,.sbc-payment-panel h4{margin:0 0 11px;color:var(--navy)}.sbc-pay{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;margin-top:7px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;align-items:center}.sbc-pay span{font-size:12px;color:var(--muted)}
-      @media(max-width:650px){.fbw-wager{max-width:none}.sbc-net{grid-template-columns:1fr}.sbc-pay{grid-template-columns:1fr auto 1fr}.sbc-pay strong{grid-column:1/-1;text-align:right}}
+      .sbc-ledger-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.sbc-ledger-head h2{margin:3px 0 0}.sbc-ledger-status{padding:7px 10px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.05em;white-space:nowrap}.sbc-ledger-status.is-live{background:#fff3d8;color:#835a00}.sbc-ledger-status.is-final{background:#e7f5ee;color:var(--good)}
+      .sbc-final-panel{margin:14px 0 22px;padding:16px;border:2px solid var(--navy);border-radius:13px;background:#f8fbff}.sbc-final-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}.sbc-final-title h3{margin:3px 0 0;color:var(--navy);font-size:20px}.sbc-final-title>span{font-size:11px;color:var(--muted);text-align:right;max-width:220px}
+      .sbc-final-pay{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.sbc-final-pay:first-of-type{border-top:0}.sbc-final-pay>div{font-size:15px}.sbc-final-pay>div span{color:var(--muted);font-size:12px}.sbc-final-pay>strong{font-size:22px;color:var(--navy)}
+      .sbc-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:end;margin-bottom:10px}.sbc-detail-head h3{margin:0;color:var(--navy)}.sbc-detail-head p{margin:0;max-width:520px;text-align:right;font-size:12px;color:var(--muted)}
+      .sbc-net>div>span{display:flex;flex-direction:column;gap:2px}.sbc-net small{font-size:9px;letter-spacing:.08em;font-weight:900;color:var(--muted)}.sbc-net .net-positive strong{color:var(--good)}.sbc-net .net-negative strong{color:var(--red)}.sbc-net .net-even strong{color:var(--muted)}
+      @media(max-width:650px){.fbw-wager{max-width:none}.sbc-ledger-head,.sbc-final-title,.sbc-detail-head{display:block}.sbc-ledger-status{display:inline-block;margin-top:8px}.sbc-final-title>span{display:block;text-align:left;max-width:none;margin-top:4px}.sbc-detail-head p{text-align:left;margin-top:5px}.sbc-net{grid-template-columns:1fr}.sbc-pay{grid-template-columns:1fr auto 1fr}.sbc-pay strong{grid-column:1/-1;text-align:right}.sbc-final-pay>strong{font-size:20px}}
     `;document.head.appendChild(s);
   }
 
