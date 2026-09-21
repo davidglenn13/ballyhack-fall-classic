@@ -139,14 +139,18 @@
     injecting=true;
     try{
       ensureStyles();
+      const private40=typeof active40Privacy==='function'&&active40Privacy();
+      if(private40){
+        app.querySelectorAll('[data-win-prob="individual"]').forEach(x=>x.remove());
+      }
+
       const model=compute();
       const chaseHeading=[...app.querySelectorAll('h2')].find(x=>/^Chase for the Cup/i.test(x.textContent.trim()));
-      if(chaseHeading && !app.querySelector('[data-win-prob="individual"]')){
+      if(!private40 && chaseHeading && !app.querySelector('[data-win-prob="individual"]')){
         const card=chaseHeading.closest('.card');
         if(card)card.insertAdjacentHTML('beforeend',individualPanel(model));
       }
 
-      const private40=typeof active40Privacy==='function'&&active40Privacy();
       const cottageCards=private40?[]:[...app.querySelectorAll('.card')].filter(c=>/^Cottage [12]$/.test(c.querySelector('h2')?.textContent.trim()||''));
       cottageCards.forEach(card=>{
         const c=+card.querySelector('h2').textContent.trim().slice(-1);
