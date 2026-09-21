@@ -99,10 +99,10 @@ test('Complete Nassau match keeps separate presses through lock, unlock, and cor
     assert.equal(out.status,200,out.body.error);
   }
   assert.equal((await x.post('David Glenn',{op:'lockGroup',round:1,group:1})).status,200);
-  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:'David Glenn',hole:18,gross:4,expectedGross:5,mutationId:'locked-edit'})).status,423);
+  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:target,hole:18,gross:4,expectedGross:5,mutationId:'locked-edit'})).status,423);
   assert.equal((await x.post('Bill McCombs',{op:'unlockGroup',round:1,group:1})).status,403);
   assert.equal((await x.post('David Glenn',{op:'unlockGroup',round:1,group:1})).status,200);
-  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:'David Glenn',hole:18,gross:4,expectedGross:5,mutationId:'corrected'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:target,hole:18,gross:4,expectedGross:5,mutationId:'corrected'})).status,200);
   const state=await x.get('David Glenn');
   assert.equal(state.nassauBets[1][1].presses.length,2);
   assert.equal(state.scores[1]['David Glenn'][18],'4');
@@ -111,7 +111,7 @@ test('Complete Nassau match keeps separate presses through lock, unlock, and cor
 
 test('A golfer requests an unlock and only the commissioner can approve it',async()=>{
   const x=session();
-  for(const player of ['David Glenn','Nick Condeni','Joe Phelan'])await x.login(player);
+  for(const player of ['David Glenn','Tyler Bohannon','Joe Phelan'])await x.login(player);
   for(const player of GROUPS[1][1])for(let hole=1;hole<=18;hole++){
     const result=await x.post('Nick Condeni',{op:'score',round:1,player,hole,gross:5,expectedGross:0,mutationId:`card-${player}-${hole}`});
     assert.equal(result.status,200,result.body.error);
@@ -253,7 +253,7 @@ test('Pressure test: concurrent two-group scoring, edits, and stale conflicts st
   for(let hole=1;hole<=18;hole++){
     const writes=[];
     for(const player of GROUPS[2][1]){
-      writes.push(x.post('Nick Condeni',{
+      writes.push(x.post('Tyler Bohannon',{
         op:'score',round:2,player,hole,gross:4+(hole%3),expectedGross:0,
         mutationId:`pressure-r2-g1-${player}-${hole}`
       }));
@@ -269,27 +269,28 @@ test('Pressure test: concurrent two-group scoring, edits, and stale conflicts st
   }
 
   // Hammer the same score from two devices. Exactly one edit may win.
-  const before=(await x.get('David Glenn')).scores[2]['Nick Condeni'][9];
+  const target=GROUPS[2][1][0];
+  const before=(await x.get('David Glenn')).scores[2][target][9];
   const race=await Promise.all([
-    x.post('David Glenn',{op:'score',round:2,player:'Nick Condeni',hole:9,gross:3,expectedGross:+before,mutationId:'pressure-race-a'}),
-    x.post('Nick Condeni',{op:'score',round:2,player:'Nick Condeni',hole:9,gross:7,expectedGross:+before,mutationId:'pressure-race-b'})
+    x.post('David Glenn',{op:'score',round:2,player:target,hole:9,gross:3,expectedGross:+before,mutationId:'pressure-race-a'}),
+    x.post('Nick Condeni',{op:'score',round:2,player:target,hole:9,gross:7,expectedGross:+before,mutationId:'pressure-race-b'})
   ]);
   assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
 
   const afterRace=await x.get('David Glenn');
-  const winningGross=+afterRace.scores[2]['Nick Condeni'][9];
+  const winningGross=+afterRace.scores[2][target][9];
   assert.equal([3,7].includes(winningGross),true);
 
   // A stale follow-up must not overwrite the winner.
   const stale=await x.post('Nick Condeni',{
-    op:'score',round:2,player:'Nick Condeni',hole:9,gross:6,expectedGross:+before,
+    op:'score',round:2,player:target,hole:9,gross:6,expectedGross:+before,
     mutationId:'pressure-stale-followup'
   });
   assert.equal(stale.status,409);
 
   // Fresh correction succeeds and survives lock.
   const fresh=await x.post('David Glenn',{
-    op:'score',round:2,player:'Nick Condeni',hole:9,gross:5,expectedGross:winningGross,
+    op:'score',round:2,player:target,hole:9,gross:5,expectedGross:winningGross,
     mutationId:'pressure-fresh-correction'
   });
   assert.equal(fresh.status,200,fresh.body.error);
@@ -300,13 +301,13 @@ test('Pressure test: concurrent two-group scoring, edits, and stale conflicts st
   }
 
   const blocked=await x.post('Nick Condeni',{
-    op:'score',round:2,player:'Nick Condeni',hole:10,gross:3,expectedGross:5,
+    op:'score',round:2,player:target,hole:10,gross:3,expectedGross:5,
     mutationId:'pressure-after-lock'
   });
   assert.equal(blocked.status,423);
 
   const final=await x.get('David Glenn');
-  assert.equal(final.scores[2]['Nick Condeni'][9],'5');
+  assert.equal(final.scores[2][target][9],'5');
   assert.equal(Object.keys(final.scores[2]).length,8);
   for(const player of Object.values(GROUPS[2]).flat()){
     assert.equal(Object.keys(final.scores[2][player]).length,18,player);
@@ -330,14 +331,15 @@ test('Pressure test: repeated backup and restore cycles preserve tournament stat
     }
   }
 
+  const target=GROUPS[3][1][0];
   for(let cycle=1;cycle<=5;cycle++){
     const backup=await x.post('David Glenn',{op:'backup'});
     assert.equal(backup.status,200,backup.body.error);
 
-    const current=(await x.get('David Glenn')).scores[3]['David Glenn'][1];
+    const current=(await x.get('David Glenn')).scores[3][target][1];
     const changed=String(+current===4?5:4);
     const edit=await x.post('David Glenn',{
-      op:'score',round:3,player:'David Glenn',hole:1,gross:+changed,expectedGross:+current,
+      op:'score',round:3,player:target,hole:1,gross:+changed,expectedGross:+current,
       mutationId:`backup-cycle-edit-${cycle}`
     });
     assert.equal(edit.status,200,edit.body.error);
@@ -346,7 +348,7 @@ test('Pressure test: repeated backup and restore cycles preserve tournament stat
     assert.equal(restore.status,200,restore.body.error);
 
     const state=await x.get('David Glenn');
-    assert.equal(state.scores[3]['David Glenn'][1],String(current));
+    assert.equal(state.scores[3][target][1],String(current));
     assert.equal(state.sideGames[3],'40 Ball');
     assert.equal(state.fortyBallBets[3],40);
   }
@@ -423,7 +425,7 @@ test('Pressure test: repeated score edits preserve audit history and final value
   for(let i=0;i<25;i++){
     const gross=3+(i%5);
     const result=await x.post('David Glenn',{
-      op:'score',round:4,player:'David Glenn',hole:18,gross,
+      op:'score',round:4,player:target,hole:18,gross,
       expectedGross:expected,mutationId:`edit-stress-${i}`
     });
     assert.equal(result.status,200,result.body.error);
