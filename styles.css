@@ -132,8 +132,12 @@
   .mobile-game-saved{padding:10px 12px!important;border:1px solid var(--line)!important;background:#f8fafc!important}
   .mobile-game-saved .mobile-game-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--navy);font-size:13px;font-weight:850}
   .mobile-game-edit{min-height:44px;flex:none}
-  .mobile-game-saved:not(.mobile-game-editing)>:not(.mobile-game-summary){display:none}
-  .mobile-game-editing>div:not(.mobile-game-summary){margin-top:12px}
+  .mobile-game-saved:not(.mobile-game-editing)>:not(.mobile-game-summary):not(.mobile-game-pairings){display:none}
+  .mobile-game-pairings{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.4;color:var(--muted)}
+  .mobile-game-pairings b{display:block;margin-bottom:3px;color:var(--navy);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+  .mobile-game-pairings span{display:block}
+  .mobile-game-editing .nassau-pairing-note{display:none}
+  .mobile-game-editing>div:not(.mobile-game-summary):not(.mobile-game-pairings){margin-top:12px}
 }
 
 
