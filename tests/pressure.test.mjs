@@ -208,3 +208,27 @@ test('pressure: side games and wagers remain isolated across rounds',async()=>{
   assert.equal(state.nassauBets[2][1].value,30);
   assert.equal(state.sideGames[3],'None');
 });
+
+
+test('pressure: Nassau wager correction persists after scoring and updates existing press amount',async()=>{
+  const x=session();
+  await x.login('David Glenn');
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'Nassau 5-5-5-1-1-1'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'nassauGroup',round:1,group:1,value:'Nassau 5-5-5-1-1-1'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[]}})).status,200);
+
+  for(const [player,gross] of [['David Glenn',6],['Nick Condeni',6],['Bill McCombs',4],['Will Long',4]]){
+    assert.equal((await x.post('David Glenn',{op:'score',round:1,player,hole:1,gross,expectedGross:0,mutationId:'wager-edit-'+player})).status,200);
+  }
+
+  const press={id:'edit-press',segment:0,fromHole:2,pressedBy:'a',amount:20,parentPressId:null};
+  assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:20,presses:[press]}})).status,200);
+
+  const corrected={...press,amount:30};
+  const changed=await x.post('David Glenn',{op:'nassauBetConfig',round:1,group:1,config:{value:30,presses:[corrected]}});
+  assert.equal(changed.status,200,changed.body.error);
+
+  const state=await x.get('David Glenn');
+  assert.equal(state.nassauBets[1][1].value,30);
+  assert.equal(state.nassauBets[1][1].presses[0].amount,30);
+});
