@@ -120,3 +120,80 @@ test('pressure: direct reset remains blocked and does not alter tournament state
   assert.deepEqual(after.scores,before.scores);
   assert.deepEqual(after.sideGames,before.sideGames);
 });
+
+
+test('pressure: concurrent 40 Ball selections stop exactly at 40 counted scores',async()=>{
+  const x=session();
+  await x.login('David Glenn');
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
+
+  const names=GROUPS[1][1];
+  let count=0;
+  outer:
+  for(const player of names){
+    for(let hole=1;hole<=18;hole++){
+      if(count===39)break outer;
+      const r=await x.post('David Glenn',{op:'fortyBallSelection',round:1,group:1,player,hole,value:true});
+      assert.equal(r.status,200,r.body.error);
+      count++;
+    }
+  }
+  assert.equal(count,39);
+
+  const candidates=[];
+  for(const player of names){
+    for(let hole=1;hole<=18;hole++){
+      const key=player+'|'+hole;
+      const state=await x.get('David Glenn');
+      if(!state.fortyBallSelections?.[1]?.[1]?.[key])candidates.push({player,hole});
+      if(candidates.length===2)break;
+    }
+    if(candidates.length===2)break;
+  }
+  assert.equal(candidates.length,2);
+
+  const race=await Promise.all(candidates.map((p,i)=>x.post('David Glenn',{
+    op:'fortyBallSelection',round:1,group:1,player:p.player,hole:p.hole,value:true
+  })));
+  assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
+
+  const final=await x.get('David Glenn');
+  assert.equal(Object.keys(final.fortyBallSelections[1][1]).length,40);
+});
+
+test('pressure: locks are isolated by round and group',async()=>{
+  const x=session();
+  await x.login('David Glenn');
+  await x.login('Tyler Bohannon');
+
+  const r1player=GROUPS[1][1][0];
+  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:r1player,hole:1,gross:5,expectedGross:0,mutationId:'lock-seed'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'lockGroup',round:1,group:1})).status,200);
+
+  const blocked=await x.post('David Glenn',{op:'score',round:1,player:r1player,hole:2,gross:5,expectedGross:0,mutationId:'locked-r1'});
+  assert.equal(blocked.status,423);
+
+  const r2player=GROUPS[2][1][0];
+  const allowed=await x.post('Tyler Bohannon',{op:'score',round:2,player:r2player,hole:1,gross:5,expectedGross:0,mutationId:'open-r2'});
+  assert.equal(allowed.status,200,allowed.body.error);
+});
+
+test('pressure: side games and wagers remain isolated across rounds',async()=>{
+  const x=session();
+  await x.login('David Glenn');
+
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'fortyBallBet',round:1,value:25})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:2,value:'Nassau 6-6-6'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'nassauGroup',round:2,group:1,value:'Nassau 6-6-6'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:2,group:1,config:{value:30,presses:[]}})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:3,value:'None'})).status,200);
+
+  const state=await x.get('David Glenn');
+  assert.equal(state.sideGames[1],'40 Ball');
+  assert.equal(state.fortyBallBets[1],25);
+  assert.equal(state.sideGames[2],'Nassau 6-6-6');
+  assert.equal(state.nassauGroups[2][1],'Nassau 6-6-6');
+  assert.equal(state.nassauBets[2][1].value,30);
+  assert.equal(state.sideGames[3],'None');
+});
