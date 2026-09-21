@@ -92,7 +92,9 @@
 
   function addWagerToPicker(r,g){
     const picker=document.querySelector('.side-game-picker'),scoreSide=document.querySelector('#scoreSideGame');
-    if(!picker||!scoreSide||!hasNassau(r,g)||picker.querySelector('.nlp-wager'))return;
+    const selected=scoreSide?.value||state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
+    const isNassau=selected==='Nassau 5-5-5-1-1-1'||selected==='Nassau 5-5-5-3'||selected==='Nassau 6-6-6';
+    if(!picker||!scoreSide||!isNassau||picker.querySelector('.nlp-wager'))return;
     const c=cfg(r,g),value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?c.value:0,host=scoreSide.closest('div')||picker;
     host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
   }
@@ -125,8 +127,9 @@
     const app=document.querySelector('#app'); if(!app)return;
     const scoreSide=document.querySelector('#scoreSideGame'); if(!scoreSide){removeSideGameWagerInputs();return;}
     const r=+(sessionStorage.r||1),g=+(sessionStorage.group||1),h=+(sessionStorage.hole||1);
-    const selected=state.sideGames?.[r]||'None';
-    if(selected==='40 Ball'||selected==='None'||!hasNassau(r,g)){
+    const selected=scoreSide.value||state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
+    const selectedNassau=selected==='Nassau 5-5-5-1-1-1'||selected==='Nassau 5-5-5-3'||selected==='Nassau 6-6-6';
+    if(selected==='40 Ball'||selected==='None'||!selectedNassau){
       document.querySelectorAll('.nlp-wager,.nlp-card').forEach(x=>x.remove());
       return;
     }
