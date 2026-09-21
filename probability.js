@@ -156,7 +156,7 @@
         const c=+card.querySelector('h2').textContent.trim().slice(-1);
         if(card.querySelector('[data-cottage-prob]'))return;
         const x=model.cottages[c];
-        card.insertAdjacentHTML('beforeend',`<div class="cottage-prob" data-cottage-prob="${c}"><strong>${pct(x.win)}</strong><span>Chance to win Cottage Cup · projected final ${x.projected.toFixed(1)} pts</span><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`);
+        card.insertAdjacentHTML('beforeend',`<div class="cottage-prob" data-cottage-prob="${c}"><strong>${pct(x.win)}</strong><span>Chance to win Cottage Cup · Projected final ${x.projected.toFixed(1)} pts</span><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.win)}%"></div></div></div>`);
       });
     } finally { injecting=false; }
   }
