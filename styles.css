@@ -114,7 +114,21 @@
   .scoring-card.score-active .score-input{align-self:start}
   .scoring-card.score-active .score-result{align-self:end;margin:0}
   .scoring-card.score-active .round-running{align-self:start;margin:0}
-  .scoring-card.score-active .score-actions{position:sticky;bottom:env(safe-area-inset-bottom,0px);z-index:4;background:#fff;padding:8px;margin:6px -12px 0;border-top:1px solid var(--line);box-shadow:0 -5px 15px #20304018}
+  .scoring-card.score-active{padding-bottom:88px}
+  .scoring-card.score-active .score-actions{
+    position:fixed;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 8px);
+    z-index:20;
+    width:min(calc(100vw - 20px),1080px);
+    background:#fff;
+    padding:8px 10px;
+    margin:0;
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:0 -5px 18px #20304024;
+  }
   .mobile-game-saved{padding:10px 12px!important;border:1px solid var(--line)!important;background:#f8fafc!important}
   .mobile-game-saved .mobile-game-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--navy);font-size:13px;font-weight:850}
   .mobile-game-edit{min-height:44px;flex:none}
