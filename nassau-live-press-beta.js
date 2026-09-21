@@ -133,7 +133,7 @@
     const existingCard=app.querySelector('.nlp-card');
     if(existingCard)existingCard.remove();
     const segments=segmentsFor(r,g),si=segments.findIndex(s=>s.holes.includes(h)); if(si<0)return;
-    const seg=segments[si],teams=nassauTeams(roundGroupNames(r,g),seg.pairing),c=cfg(r,g),fmt=formatFor(r,g);
+    const seg=segments[si],teams=nassauTeams(roundGroupNames(r,g),seg.pairing),c=cfg(r,g),fmt=formatFor(r,g)||state.sideGames?.[r]||'Nassau 5-5-5-1-1-1';
     const firstHole=seg.holes[0],nextHole=nextUnplayedHole(r,g,seg),singleHole=!!seg.singleHole;
     sanitizePresses(r,g,si,seg,c,nextHole);
 
