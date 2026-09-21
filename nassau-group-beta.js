@@ -76,6 +76,12 @@
       apiPost({op:'fortyBallBet',round:r,value:0}).catch?.(()=>{});
     });
   }
+  function clearFortySelectionsLocal(r){
+    state.fortyBallSelections??={};
+    delete state.fortyBallSelections[r];
+    delete state.fortyBallSelections[String(r)];
+    save();
+  }
 
   function clearNassauWager(r,g){
     state.nassauBets??={};
@@ -101,6 +107,7 @@
       if(value===FORTY){
         if(previous!==FORTY){
           clearFortyWager(r);
+          if(previous==='None')clearFortySelectionsLocal(r);
           sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
           sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
         }
@@ -116,6 +123,7 @@
         // None is a hard reset. UI switches to None immediately and all old
         // wager/config data is cleared without being allowed to block it.
         clearFortyWager(r);
+        clearFortySelectionsLocal(r);
         clearNassauWager(r,1);
         clearNassauWager(r,2);
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
