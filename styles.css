@@ -178,7 +178,7 @@
 .standings-table th:nth-child(3),.standings-table td:nth-child(3){width:48px}
 .standings-table th:nth-child(4),.standings-table td:nth-child(4){width:52px}
 .standings-table th:nth-child(n+5),.standings-table td:nth-child(n+5){width:42px}
-.standings-name-short,.best3-short{display:none}
+.standings-name-short{display:none}
 
 @media(max-width:640px){
   .standings-table{font-size:11px}
@@ -186,13 +186,13 @@
   .standings-table th:nth-child(1),.standings-table td:nth-child(1){width:28px}
   .standings-table th:nth-child(2),.standings-table td:nth-child(2){width:92px}
   .standings-table th:nth-child(3),.standings-table td:nth-child(3){width:28px}
-  .standings-table th:nth-child(4),.standings-table td:nth-child(4){width:30px}
+  .standings-table th:nth-child(4),.standings-table td:nth-child(4){width:40px}
   .standings-table th:nth-child(n+5),.standings-table td:nth-child(n+5){width:28px}
   .standings-table .rank{font-size:15px}
   .standings-table .standings-player{gap:4px;min-width:0}
   .standings-table .standings-player .player-avatar{width:24px;height:24px;flex:0 0 24px}
-  .standings-name-full,.best3-full{display:none}
-  .standings-name-short,.best3-short{display:inline}
+  .standings-name-full{display:none}
+  .standings-name-short{display:inline}
   .standings-name-short{overflow:hidden;text-overflow:ellipsis}
   .standings-table .change-col{font-size:9px;letter-spacing:-2px}
 }
