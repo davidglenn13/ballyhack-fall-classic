@@ -137,9 +137,9 @@
   function roundCashBlock(r){
     const x=fortyNet(r),pay=payments(x.net);
     let status='Enter the 40 Ball wager from the First Group score screen.';
-    if(x.value&&!x.complete)status=`Wager ${money(x.value)} per player · cash result is pending until both groups have 40 counted scores.`;
-    if(x.complete&&x.winner===0)status=`40 Ball finished tied · no money changes hands.`;
-    if(x.complete&&x.winner)status=`${x.winner===1?'First':'Second'} Group wins · each winner +${money(x.value)}, each loser ${money(-x.value)}.`;
+    if(x.value&&!x.complete)status=`Wager ${money(x.value)} per player · Cash result is pending until both groups have 40 counted scores.`;
+    if(x.complete&&x.winner===0)status=`40 Ball finished tied · No money changes hands.`;
+    if(x.complete&&x.winner)status=`${x.winner===1?'First':'Second'} Group wins · Each winner +${money(x.value)}, each loser ${money(-x.value)}.`;
     const nets=PLAYERS.map(p=>`<div><span>${p.name}</span><strong>${x.net[p.name]>0?'+':''}${money(x.net[p.name])}</strong></div>`).join('');
     const who=pay.length?pay.map(p=>`<div class="sbc-pay"><b>${p.from}</b><span>pays</span><b>${p.to}</b><strong>${money(p.amount)}</strong></div>`).join(''):`<p class="notice compact">${x.complete?'No payment due for this round.':'Payments will appear when the 40 Ball result is complete.'}</p>`;
     return `<section class="fbw-round-cash"><div class="eyebrow">40 BALL WAGER</div><h3>Round Cash Result</h3><p>${status}</p><div class="sbc-net">${nets}</div><div class="sbc-payment-panel"><h4>Who Pays Who</h4>${who}</div></section>`;
