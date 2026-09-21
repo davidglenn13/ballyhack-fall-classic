@@ -9,7 +9,11 @@
   };
   const money=v=>{const n=Number(v||0);return `${n<0?'−':''}$${Math.abs(n).toFixed(Number.isInteger(Math.abs(n))?0:2)}`};
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const has=(r,g)=>!!(state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)]);
+  const has=(r,g)=>{
+    const grouped=state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)];
+    const cfg=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)];
+    return !!(grouped||Number(cfg?.value||0)>0||(Array.isArray(cfg?.presses)&&cfg.presses.length));
+  };
   async function persist(r,g){save();await apiPost({op:'nassauBetConfig',round:r,group:g,config:bet(r,g)});}
 
   function outcome(r,g,seg,holes){
