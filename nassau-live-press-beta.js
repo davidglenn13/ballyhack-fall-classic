@@ -75,10 +75,13 @@
   }
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
   function pairingSummary(r,g){
-    return segmentsFor(r,g).map(seg=>{
+    const segs=segmentsFor(r,g),fmt=formatFor(r,g);
+    const rows=(fmt==='Nassau 5-5-5-1-1-1'?segs.slice(0,3):segs).map(seg=>{
       const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
       return `${seg.label}: ${shortTeam(teams[0])} vs ${shortTeam(teams[1])}`;
-    }).join(' · ');
+    });
+    if(fmt==='Nassau 5-5-5-1-1-1')rows.push('Holes 16–18: Repeat the pairing order');
+    return rows.join(' · ');
   }
   function moveSelectedPicker(r,g,target){
     const picker=document.querySelector('.side-game-picker');
