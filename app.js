@@ -6,7 +6,7 @@ const SI=[3,11,15,1,5,13,17,9,7,12,14,4,16,6,10,2,18,8];
 const ROUNDS=[
 {name:'Round 1 · Wed',time:'1:00 / 1:15 PM',first:['David Glenn','Nick Condeni','Bill McCombs','Will Long'],second:['Jason Wain','Joe Phelan','Tyler Bohannon','Scott Karl'],caddie:'Both groups'},
 {name:'Round 2 · Thu AM',time:'9:10 / 9:20 AM',first:['Tyler Bohannon','Scott Karl','Bill McCombs','Will Long'],second:['David Glenn','Nick Condeni','Jason Wain','Joe Phelan'],caddie:'First group'},
-{name:'Round 3 · Thu Replay',time:'After lunch · variable',first:['Jason Wain','Joe Phelan','Bill McCombs','Will Long'],second:['David Glenn','Nick Condeni','Tyler Bohannon','Scott Karl'],caddie:'None — replay round'},
+{name:'Round 3 · Thu Replay',time:'After lunch · Variable',first:['Jason Wain','Joe Phelan','Bill McCombs','Will Long'],second:['David Glenn','Nick Condeni','Tyler Bohannon','Scott Karl'],caddie:'None — replay round'},
 {name:'Round 4 · Fri',time:'9:00 / 9:10 AM',first:['Nick Condeni','Joe Phelan','Scott Karl','Will Long'],second:['David Glenn','Jason Wain','Tyler Bohannon','Bill McCombs'],caddie:'First group'}
 ];
 const key='ballyhack-fall-classic-2026-v2';
