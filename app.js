@@ -988,7 +988,7 @@ function cottage(){
       <div class="kpi">${t1}</div>
 
       <div class="muted">
-        ${privacy?'Through completed rounds':'Best 3 of 4 each round · all rounds count'}
+        ${privacy?'Through completed rounds':'Best 3 of 4 each round · All rounds count'}
       </div>
 
       ${c1.map((x,i)=>`
@@ -1013,7 +1013,7 @@ function cottage(){
       <div class="kpi">${t2}</div>
 
       <div class="muted">
-        ${privacy?'Through completed rounds':'Best 3 of 4 each round · all rounds count'}
+        ${privacy?'Through completed rounds':'Best 3 of 4 each round · All rounds count'}
       </div>
 
       ${c2.map((x,i)=>`
