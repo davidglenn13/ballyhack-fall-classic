@@ -9,7 +9,6 @@
 
 
 /* Cross-page visual consistency pass */
-.card{overflow:hidden}
 .card>.eyebrow,.side-head .eyebrow,.sbc-ledger-head .eyebrow{
   margin-bottom:4px;
 }
