@@ -5,6 +5,8 @@
   const SIMS = 15000;
   const BASE_PPH = 1.85;
   const SD_PER_HOLE = 1.05;
+  const FORM_PRIOR_HOLES = 54;
+  const EARLY_FORM_SD = 0.42;
   let injecting = false;
   let lastSignature = '';
   let cached = null;
@@ -53,11 +55,31 @@
     return {pts,holes};
   }
 
-  function simulateRound(r,name,rand){
+  function forecastProfile(name){
+    let pts=0,holes=0;
+    for(let r=1;r<=4;r++){
+      const live=enteredHolePoints(r,name);
+      pts+=live.pts;
+      holes+=live.holes;
+    }
+
+    const observed=holes?pts/holes:BASE_PPH;
+    const weight=holes/(FORM_PRIOR_HOLES+holes);
+    const mean=BASE_PPH+(observed-BASE_PPH)*weight;
+
+    // Early in the tournament, there is substantial uncertainty about whether
+    // a hot/cold start represents the golfer's true scoring level. That
+    // uncertainty shrinks as more tournament holes are actually observed.
+    const skillSd=EARLY_FORM_SD*Math.sqrt(FORM_PRIOR_HOLES/(FORM_PRIOR_HOLES+holes));
+
+    return {mean,skillSd,holes};
+  }
+
+  function simulateRound(r,name,rand,expectedPph){
     const live=enteredHolePoints(r,name);
     const remaining=18-live.holes;
     if(!remaining)return live.pts;
-    const mean=remaining*BASE_PPH;
+    const mean=remaining*expectedPph;
     const sd=Math.sqrt(remaining)*SD_PER_HOLE;
     const simulated=Math.round(mean+normal(rand)*sd);
     return live.pts+Math.max(0,Math.min(remaining*5,simulated));
@@ -73,10 +95,15 @@
     const cottageWins={1:0,2:0};
     const projectedPlayer=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
     const projectedCottage={1:0,2:0};
+    const profiles=Object.fromEntries(PLAYERS.map(p=>[p.name,forecastProfile(p.name)]));
 
     for(let s=0;s<SIMS;s++){
       const rounds={};
-      PLAYERS.forEach(p=>{ rounds[p.name]=[1,2,3,4].map(r=>simulateRound(r,p.name,rand)); });
+      PLAYERS.forEach(p=>{
+        const profile=profiles[p.name];
+        const expectedPph=Math.max(.65,Math.min(3.25,profile.mean+normal(rand)*profile.skillSd));
+        rounds[p.name]=[1,2,3,4].map(r=>simulateRound(r,p.name,rand,expectedPph));
+      });
 
       const finalTotals=PLAYERS.map(p=>({name:p.name,total:[...rounds[p.name]].sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)}));
       const best=Math.max(...finalTotals.map(x=>x.total));
