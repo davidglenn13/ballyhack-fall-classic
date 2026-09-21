@@ -188,6 +188,9 @@
       note.textContent='Either Nassau format can be selected independently by each foursome.';
       pairings.textContent='';
     }
+    if(typeof window.__ensureNassauWagerField==='function'){
+      window.__ensureNassauWagerField(r,g);
+    }
   }
 
   function nassauPanel(r,g){
