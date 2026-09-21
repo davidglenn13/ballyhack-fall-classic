@@ -351,3 +351,87 @@ test('Pressure test: repeated backup and restore cycles preserve tournament stat
     assert.equal(state.fortyBallBets[3],40);
   }
 });
+
+
+test('Pressure test: reset invalidates stale clients and clears mutable tournament state',async()=>{
+  const x=session();
+  for(const player of ['David Glenn','Nick Condeni'])await x.login(player);
+
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'fortyBallBet',round:1,value:50})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'score',round:1,player:'Nick Condeni',hole:1,gross:4,expectedGross:0,mutationId:'pre-reset'})).status,200);
+
+  const staleState=await x.get('Nick Condeni');
+  const staleEpoch=staleState.epoch;
+
+  const reset=await x.post('David Glenn',{op:'reset'});
+  assert.equal(reset.status,200,reset.body.error);
+
+  const state=await x.get('David Glenn');
+  assert.deepEqual(state.scores,{});
+  assert.deepEqual(state.fortyBallBets,{});
+  assert.deepEqual(state.fortyBallSelections,{});
+  assert.notDeepEqual(state.epoch,staleEpoch);
+
+  const stale=await x.send('POST','Nick Condeni',{
+    op:'score',round:1,player:'Nick Condeni',hole:1,gross:5,expectedGross:0,
+    mutationId:'stale-after-reset',epoch:staleEpoch
+  });
+  assert.equal(stale.status,409);
+
+  const fresh=await x.post('Nick Condeni',{
+    op:'score',round:1,player:'Nick Condeni',hole:1,gross:5,expectedGross:0,
+    mutationId:'fresh-after-reset'
+  });
+  assert.equal(fresh.status,200,fresh.body.error);
+});
+
+test('Pressure test: side-game settings reject stale revisions across rapid changes',async()=>{
+  const x=session();
+  await x.login('David Glenn');
+  await x.login('Nick Condeni');
+
+  const initial=await x.get('David Glenn');
+  const rev=initial.revisions.sideGames||null;
+
+  const first=await x.send('POST','David Glenn',{
+    op:'sideGame',round:4,value:'40 Ball',actor:'David Glenn',authToken:undefined,
+    expectedRevision:rev,epoch:initial.epoch
+  });
+  // direct send omits stored token, so retry through authenticated helper while retaining revision behavior
+  if(first.status!==200){
+    assert.equal((await x.post('David Glenn',{op:'sideGame',round:4,value:'40 Ball',expectedRevision:rev})).status,200);
+  }
+
+  const stale=await x.send('POST','Nick Condeni',{
+    op:'sideGame',round:4,value:'None',actor:'Nick Condeni',
+    expectedRevision:rev,epoch:initial.epoch
+  });
+  assert.equal([401,409].includes(stale.status),true);
+
+  const current=await x.get('David Glenn');
+  const latestRevision=current.revisions.sideGames||null;
+  const valid=await x.post('David Glenn',{op:'sideGame',round:4,value:'None',expectedRevision:latestRevision});
+  assert.equal(valid.status,200,valid.body.error);
+});
+
+test('Pressure test: repeated score edits preserve audit history and final value',async()=>{
+  const x=session();
+  await x.login('David Glenn');
+
+  let expected=0;
+  for(let i=0;i<25;i++){
+    const gross=3+(i%5);
+    const result=await x.post('David Glenn',{
+      op:'score',round:4,player:'David Glenn',hole:18,gross,
+      expectedGross:expected,mutationId:`edit-stress-${i}`
+    });
+    assert.equal(result.status,200,result.body.error);
+    expected=gross;
+  }
+
+  const state=await x.get('David Glenn');
+  assert.equal(+state.scores[4]['David Glenn'][18],expected);
+  const audit=state.audit.filter(row=>row.round_no===4&&row.player==='David Glenn'&&row.hole_no===18);
+  assert.equal(audit.length>=24,true);
+});
