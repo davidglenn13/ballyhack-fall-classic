@@ -940,7 +940,7 @@ function board(){
               <th>Pos</th>
               <th>Golfer</th>
               <th class="change-col" aria-label="Change" title="Change">▲▼</th>
-              <th><span class="best3-full">Best 3</span><span class="best3-short">B3</span></th>
+              <th>Best 3</th>
               <th>R1</th>
               <th>R2</th>
               <th>R3</th>
