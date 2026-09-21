@@ -161,18 +161,36 @@
     const isNassau=displayed===N55||displayed===N66||displayed===LEGACY_N55;
     if(isNassau&&picker){
       picker.style.display='grid';
-      picker.style.gridTemplateColumns='minmax(0,1fr) auto';
+      picker.style.gridTemplateColumns='minmax(0,1fr)';
       picker.style.width='100%';
       picker.style.maxWidth='100%';
       picker.style.minWidth='0';
       picker.style.boxSizing='border-box';
+      const setup=sel.closest('div');
+      if(setup){
+        setup.style.gridColumn='1';
+        setup.style.width='100%';
+        setup.style.maxWidth='100%';
+        setup.style.minWidth='0';
+        setup.style.boxSizing='border-box';
+      }
+      const resultsButton=picker.querySelector('[data-view-side-results]');
+      if(resultsButton){
+        resultsButton.style.gridColumn='1';
+        resultsButton.style.width='100%';
+        resultsButton.style.maxWidth='100%';
+        resultsButton.style.minWidth='0';
+        resultsButton.style.boxSizing='border-box';
+        resultsButton.style.order='3';
+      }
       let row=picker.querySelector(':scope > .side-game-wager-row');
       if(!row){
         row=document.createElement('div');
         row.className='side-game-wager-row';
         picker.appendChild(row);
       }
-      row.style.gridColumn='1 / -1';
+      row.style.gridColumn='1';
+      row.style.order='2';
       row.style.width='100%';
       row.style.maxWidth='100%';
       row.style.minWidth='0';
