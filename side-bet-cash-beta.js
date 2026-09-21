@@ -164,7 +164,7 @@
     const statusText=final?'SETTLEMENT COMPLETE':'LIVE · ESTIMATED';
     const summary=pay.length
       ?pay.map(x=>`<div class="sbc-final-pay"><div><b>${x.from}</b><span> pays </span><b>${x.to}</b></div><strong>${money(x.amount)}</strong></div>`).join('')
-      :`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Enter side-game wagers and completed results will populate here automatically.'}</p>`;
+      :`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Completed results will populate here automatically.'}</p>`;
 
     return `<section class="card sbc-ledger">
       <div class="sbc-ledger-head">
