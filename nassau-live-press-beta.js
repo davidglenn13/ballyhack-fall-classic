@@ -98,6 +98,7 @@
     const c=cfg(r,g),value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?c.value:0,host=scoreSide.closest('div')||picker;
     host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
   }
+  window.__ensureNassauWagerField=(r,g)=>addWagerToPicker(r,g);
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
   function pairingSummary(r,g){
     const segs=segmentsFor(r,g),fmt=formatFor(r,g);
