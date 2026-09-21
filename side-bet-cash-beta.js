@@ -310,7 +310,7 @@
       </div>
 
       <div class="sbc-detail-head">
-        <h3>Player Net Detail</h3>
+        <h3>Player Net Detail - Click for Chit</h3>
         <p>Nassau base matches, presses, and 40 Ball wagers are netted across all completed results.</p>
       </div>
 
