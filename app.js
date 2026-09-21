@@ -2015,8 +2015,15 @@ sideStyle.textContent=`
     flex:1 1 0!important
   }
 
-  .side-game-picker button{
+  .side-game-picker button:not(.mobile-game-edit){
     width:100%!important
+  }
+
+  .side-game-picker .mobile-game-edit{
+    width:auto!important;
+    max-width:none!important;
+    min-width:72px!important;
+    flex:0 0 auto!important
   }
 
   .side-head{
