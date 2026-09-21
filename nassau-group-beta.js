@@ -156,7 +156,21 @@
     ensurePickerOptions(sel);
     const r=roundNo(),g=groupNo(),fmt=formatFor(r,g);
     sel.value=displayGameForScore(r,g);
-    const eyebrow=sel.closest('.side-game-picker')?.querySelector('.eyebrow');
+    const picker=sel.closest('.side-game-picker');
+    const displayed=sel.value;
+    const isNassau=displayed===N55||displayed===N66||displayed===LEGACY_N55;
+    if(isNassau){
+      let wager=picker?.querySelector('.nlp-wager');
+      if(!wager&&picker){
+        const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0};
+        const value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?Number(bet.value||0):0;
+        const host=sel.closest('div')||picker;
+        host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
+      }
+    }else{
+      picker?.querySelector('.nlp-wager')?.remove();
+    }
+    const eyebrow=picker?.querySelector('.eyebrow');
     if(eyebrow) eyebrow.textContent=(state.sideGames?.[r]===FORTY)?'SIDE GAME FOR THIS ROUND':'SIDE GAME FOR THIS GROUP';
     let note=sel.closest('.side-game-picker')?.querySelector('.nassau-group-note');
     if(!note){
