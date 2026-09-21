@@ -79,7 +79,12 @@
   function totalSideNet(){
     const net=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
     for(let r=1;r<=4;r++){
-      for(let g=1;g<=2;g++)Object.entries(nassauGroupNet(r,g)).forEach(([n,v])=>net[n]+=v);
+      for(let g=1;g<=2;g++){
+        const nassauNet=typeof window.nassauCashNetForGroup==='function'
+          ?window.nassauCashNetForGroup(r,g)
+          :nassauGroupNet(r,g);
+        Object.entries(nassauNet).forEach(([n,v])=>net[n]+=v);
+      }
       Object.entries(fortyNet(r).net).forEach(([n,v])=>net[n]+=v);
     }
     return net;
