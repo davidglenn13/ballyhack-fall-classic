@@ -175,7 +175,7 @@
       pairings.textContent='';
     }else if(state.sideGames?.[r]!=='None'&&fmt){
       note.textContent=fmt===N55
-        ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16–18 repeat the pairing order.'
+        ?'Nassau 5-5-5-1-1-1 is active for this foursome.'
         :`${fmt} is active only for this foursome.`;
       const pairingSegments=segmentsFor(r,g);
       const pairingRows=(fmt===N55?pairingSegments.slice(0,3):pairingSegments).map(seg=>{
