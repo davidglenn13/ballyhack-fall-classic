@@ -62,10 +62,10 @@
     return `${margin} hole${margin===1?'':'s'} ${teamAhead?'up':'down'}`;
   }
   function currentMatchText(viewedStanding,teams){
-    if(!standing?.x?.played)return 'Not started';
-    if(!standing.margin)return 'All square';
-    const down=standing.loser==='a'?teams[0]:teams[1];
-    return `${shortTeam(down)} ${standing.margin} down`;
+    if(!viewedStanding?.x?.played)return 'Not started';
+    if(!viewedStanding.margin)return 'All square';
+    const down=viewedStanding.loser==='a'?teams[0]:teams[1];
+    return `${shortTeam(down)} ${viewedStanding.margin} down`;
   }
   function holeComplete(r,g,h){ return roundGroupNames(r,g).every(n=>+state.scores?.[r]?.[n]?.[h]>0); }
   function nextUnplayedHole(r,g,seg){ return seg.holes.find(h=>!holeComplete(r,g,h)) ?? null; }
