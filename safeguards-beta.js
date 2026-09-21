@@ -240,6 +240,13 @@ function groupProgress(round,group){
   }
   return {entered,missing:72-entered,complete:entered===72,names};
 }
+function fortyBallLockStatus(round,group){
+  const game=state.sideGames?.[round]??state.sideGames?.[String(round)]??'None';
+  if(game!=='40 Ball')return {required:false,count:40,complete:true};
+  const selections=state.fortyBallSelections?.[round]?.[group]??state.fortyBallSelections?.[String(round)]?.[String(group)]??{};
+  const count=Object.values(selections).filter(Boolean).length;
+  return {required:true,count,complete:count===40};
+}
 function firstMissingScore(round,group){
   const names=roundGroupNames(round,group);
   for(let hole=1;hole<=18;hole++)for(const name of names){
@@ -291,16 +298,18 @@ score=function(){
   const round=+(sessionStorage.r||1);
   const group=+(sessionStorage.group||1);
   const progress=groupProgress(round,group);
+  const fortyLock=fortyBallLockStatus(round,group);
+  const lockReady=progress.complete&&fortyLock.complete;
   const isLocked=locked(round,group);
   const unlockRequest=state.unlockRequests?.[round+'-'+group];
   const mayRequest=isLocked&&currentUser()!=='David Glenn'&&canEdit(round,group);
   let html=originalScore();
   const review='<section class="score-review '+(isLocked?'locked':'')+'">'+
     '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Scorecard Locked':'Review & Confirm Foursome')+'</h3>'+
-    (!isLocked?'<p>'+(progress.complete?'All 72 gross scores are entered. Review the card before locking it.':progress.missing+' of 72 gross scores are still missing.')+'</p>':(unlockRequest?'<p>Unlock requested by '+unlockRequest.requestedBy+'.</p>':''))+'</div>'+
+    (!isLocked?'<p>'+(!progress.complete?progress.missing+' of 72 gross scores are still missing.':!fortyLock.complete?'40 Ball must reach 40/40 before this scorecard can be locked. '+fortyLock.count+'/40 are currently counted.':'All 72 gross scores are entered and 40 Ball is complete. Review the card before locking it.')+'</p>':(unlockRequest?'<p>Unlock requested by '+unlockRequest.requestedBy+'.</p>':''))+'</div>'+
     '<div class="review-actions">'+
     (!isLocked&&!progress.complete?'<button class="secondary" id="findMissingScore">Find Missing Score</button>':'')+
-    (!isLocked&&progress.complete&&canEdit(round,group)?'<button class="primary" id="lockGroup">Confirm & Lock</button>':'')+
+    (!isLocked&&lockReady&&canEdit(round,group)?'<button class="primary" id="lockGroup">Confirm & Lock</button>':'')+
     (mayRequest&&!unlockRequest?'<button class="secondary" id="requestUnlock">Request Unlock</button>':'')+
     (mayRequest&&unlockRequest?'<button class="secondary" disabled>Unlock Requested</button>':'')+
     (isLocked&&currentUser()==='David Glenn'?'<button class="secondary" id="unlockGroup">Commissioner Unlock</button>':'')+
