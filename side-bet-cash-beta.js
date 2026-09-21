@@ -92,6 +92,122 @@
     return net;
   }
 
+  function outcomeAmountForPlayer(name,outcome,amount){
+    amount=Number(amount||0);
+    if(!amount||!outcome?.complete||!outcome.winner||outcome.winner==='half')return 0;
+    const winners=outcome.winner==='a'?outcome.teams[0]:outcome.teams[1];
+    const losers=outcome.winner==='a'?outcome.teams[1]:outcome.teams[0];
+    if(winners.includes(name))return amount;
+    if(losers.includes(name))return -amount;
+    return 0;
+  }
+
+  function playerNetBreakdown(name){
+    const lines=[];
+    for(let r=1;r<=4;r++){
+      const forty=fortyNet(r);
+      const fortyAmount=Number(forty.net?.[name]||0);
+      if(fortyAmount){
+        lines.push({
+          round:r,
+          type:'40 Ball',
+          detail:'Round '+r+' result',
+          amount:fortyAmount
+        });
+      }
+
+      for(let g=1;g<=2;g++){
+        const names=roundGroupNames(r,g);
+        if(!names.includes(name))continue;
+        const cfg=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0,presses:[]};
+        const active=!!(
+          state.nassauGroups?.[r]?.[g]||
+          state.nassauGroups?.[String(r)]?.[String(g)]||
+          Number(cfg.value||0)>0||
+          (Array.isArray(cfg.presses)&&cfg.presses.length)
+        );
+        if(!active)continue;
+
+        const segs=typeof window.nassauSegmentsFor==='function'?window.nassauSegmentsFor(r,g):NASSAU_SEGMENTS;
+        segs.forEach(seg=>{
+          const x=nassauSegment(r,g,seg);
+          const outcome={
+            ...x,
+            complete:x.played===x.total,
+            winner:x.played===x.total?(x.aWins>x.bWins?'a':x.bWins>x.aWins?'b':'half'):null
+          };
+          const amount=outcomeAmountForPlayer(name,outcome,cfg.value);
+          if(amount)lines.push({
+            round:r,
+            type:'Nassau',
+            detail:seg.label,
+            amount
+          });
+        });
+
+        (Array.isArray(cfg.presses)?cfg.presses:[]).forEach(p=>{
+          const seg=segs[+p.segment];
+          if(!seg||seg.singleHole)return;
+          const outcome=nassauOutcome(r,g,seg,seg.holes.filter(h=>h>=+p.fromHole));
+          const amount=outcomeAmountForPlayer(name,outcome,p.amount);
+          if(amount)lines.push({
+            round:r,
+            type:p.parentPressId?'Press the Press':'Nassau Press',
+            detail:seg.label+' · starts Hole '+p.fromHole,
+            amount
+          });
+        });
+      }
+    }
+    return lines;
+  }
+
+  function signedMoney(v){
+    const n=Number(v||0);
+    return n>0?'+'+money(n):n<0?'-'+money(Math.abs(n)):money(0);
+  }
+
+  function closePlayerChit(){
+    const old=document.querySelector('.sbc-chit-backdrop');
+    if(old)old.remove();
+  }
+
+  function openPlayerChit(name){
+    closePlayerChit();
+    const lines=playerNetBreakdown(name);
+    const total=lines.reduce((sum,line)=>sum+Number(line.amount||0),0);
+    const rows=lines.length?lines.map(line=>`
+      <div class="sbc-chit-row">
+        <div>
+          <b>${line.type}</b>
+          <span>Round ${line.round} · ${line.detail}</span>
+        </div>
+        <strong class="${line.amount>0?'win':'loss'}">${signedMoney(line.amount)}</strong>
+      </div>`).join(''):`<p class="notice compact">No completed side-game results are contributing to this player's net yet.</p>`;
+
+    const wrap=document.createElement('div');
+    wrap.className='sbc-chit-backdrop';
+    wrap.innerHTML=`
+      <section class="sbc-chit" role="dialog" aria-modal="true" aria-label="${name} side bet detail">
+        <div class="sbc-chit-head">
+          <div>
+            <div class="eyebrow">PLAYER NET CHIT</div>
+            <h3>${name}</h3>
+          </div>
+          <button type="button" class="sbc-chit-close" aria-label="Close player net detail">×</button>
+        </div>
+        <p class="sbc-chit-intro">Completed wagers currently included in this player's Ledger total.</p>
+        <div class="sbc-chit-lines">${rows}</div>
+        <div class="sbc-chit-total">
+          <span>Net Total</span>
+          <strong class="${total>0?'win':total<0?'loss':''}">${signedMoney(total)}</strong>
+        </div>
+      </section>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('.sbc-chit-close')?.addEventListener('click',closePlayerChit);
+    wrap.addEventListener('click',e=>{if(e.target===wrap)closePlayerChit();});
+  }
+
   function payments(net){
     const cr=[],db=[];
     Object.entries(net).forEach(([name,v])=>{const c=Math.round(Number(v||0)*100);if(c>0)cr.push({name,c});if(c<0)db.push({name,c:-c})});
@@ -202,7 +318,7 @@
         const v=net[p.name]||0;
         const label=v>0?'RECEIVES':v<0?'OWES':'EVEN';
         const amount=v<0?`-${money(Math.abs(v))}`:money(Math.abs(v));
-        return `<div class="${v>0?'net-positive':v<0?'net-negative':'net-even'}"><span><b>${p.name}</b><small>${label}</small></span><strong>${amount}</strong></div>`;
+        return `<button type="button" class="sbc-net-player ${v>0?'net-positive':v<0?'net-negative':'net-even'}" data-sbc-player="${p.name}" aria-label="View ${p.name} side bet breakdown"><span><b>${p.name}</b><small>${label}</small></span><strong>${amount}</strong><span class="sbc-net-open" aria-hidden="true">›</span></button>`;
       }).join('')}</div>
     </section>`;
   }
@@ -264,10 +380,16 @@
       .sbc-final-pay{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.sbc-final-pay:first-of-type{border-top:0}.sbc-final-pay>div{font-size:15px}.sbc-final-pay>div span{color:var(--muted);font-size:12px}.sbc-final-pay>strong{font-size:22px;color:var(--navy)}
       .sbc-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:end;margin-bottom:10px}.sbc-detail-head h3{margin:0;color:var(--navy)}.sbc-detail-head p{margin:0;max-width:520px;text-align:right;font-size:12px;color:var(--muted)}
       .sbc-net>div>span{display:flex;flex-direction:column;gap:2px}.sbc-net small{font-size:9px;letter-spacing:.08em;font-weight:900;color:var(--muted)}.sbc-net .net-positive strong{color:var(--good)}.sbc-net .net-negative strong{color:var(--red)}.sbc-net .net-even strong{color:var(--muted)}
+      .sbc-net-player{display:grid;grid-template-columns:1fr auto 16px;align-items:center;gap:8px;width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--text);text-align:left;font:inherit;cursor:pointer}.sbc-net-player>span:first-child{display:flex;flex-direction:column;gap:2px}.sbc-net-player>strong{font-size:inherit}.sbc-net-open{font-size:24px;line-height:1;color:var(--muted);text-align:right}.sbc-net-player:active{transform:scale(.995)}
+      .sbc-chit-backdrop{position:fixed;inset:0;z-index:10050;background:rgba(9,20,38,.58);display:flex;align-items:center;justify-content:center;padding:18px}.sbc-chit{width:min(560px,100%);max-height:86vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 20px 70px rgba(0,0,0,.28)}.sbc-chit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.sbc-chit-head h3{margin:3px 0 0;color:var(--navy);font-size:24px}.sbc-chit-close{border:0;background:#eef2f6;color:var(--navy);width:44px;height:44px;min-width:44px;border-radius:50%;font-size:28px;line-height:1;cursor:pointer}.sbc-chit-intro{margin:10px 0 14px;color:var(--muted);font-size:13px}.sbc-chit-lines{border-top:1px solid var(--line)}.sbc-chit-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}.sbc-chit-row div{min-width:0}.sbc-chit-row b,.sbc-chit-row span{display:block}.sbc-chit-row b{color:var(--navy)}.sbc-chit-row span{margin-top:3px;color:var(--muted);font-size:12px}.sbc-chit-row strong,.sbc-chit-total strong{font-size:19px;white-space:nowrap}.sbc-chit .win{color:var(--good)}.sbc-chit .loss{color:var(--red)}.sbc-chit-total{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:14px;padding:14px;border:2px solid var(--navy);border-radius:11px;background:#f8fbff}.sbc-chit-total span{font-weight:900;color:var(--navy)}
       @media(max-width:650px){.fbw-wager{max-width:none}.sbc-ledger-head{display:flex;align-items:flex-start}.sbc-final-title,.sbc-detail-head{display:block}.sbc-ledger-status{display:inline-block;margin-top:0}.sbc-final-title>span{display:block;text-align:left;max-width:none;margin-top:4px}.sbc-detail-head p{text-align:left;margin-top:5px}.sbc-net{grid-template-columns:1fr}.sbc-pay{grid-template-columns:1fr auto 1fr}.sbc-pay strong{grid-column:1/-1;text-align:right}.sbc-final-pay>strong{font-size:20px}}
     `;document.head.appendChild(s);
   }
 
+  document.addEventListener('click',e=>{
+    const player=e.target.closest?.('[data-sbc-player]')?.dataset.sbcPlayer;
+    if(player)openPlayerChit(player);
+  });
   document.addEventListener('input',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;x.value=x.value.replace(/\D/g,'').slice(0,4);x.closest('.fbw-wager')?.classList.toggle('needs-wager',!(+x.value))});
   document.addEventListener('change',e=>{const x=e.target.closest?.('[data-fbw-wager]');if(!x)return;const r=+x.dataset.r,v=Math.min(9999,Math.max(0,parseInt(x.value,10)||0));x.value=v||'';if(typeof sideGameWasSelected==='function'){[1,2].forEach(group=>v?sessionStorage.setItem('ballyhack-side-selected-'+r+'-'+group,'1'):sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+group));}persistWager(r,v).then(()=>render())});
 
