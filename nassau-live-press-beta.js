@@ -152,7 +152,14 @@
 
     if(singleHole)return;
     const cards=[];
-    const wagerCard=(label,p,teamKey,pressState)=>`<div class="nlp-wager-card recorded"><div><span class="nlp-bet-label">${label}</span><h3>${shortTeam(teamKey==='a'?teams[0]:teams[1])}</h3></div><div class="nlp-side"><span>Starts</span><b>Hole ${p.fromHole}</b></div><div class="nlp-side"><span>${pressState.played===seg.holes.filter(x=>x>=+p.fromHole).length?'Final':'Standing'}</span><b>${teamPosition(pressState,teamKey)}</b></div><div class="nlp-side"><span>Wager</span><b>$${p.amount}</b></div></div>`;
+    const wagerCard=(label,p,teamKey,pressState)=>`<div class="nlp-wager-card recorded"><div><span class="nlp-bet-label">${label}</span><h3>${shortTeam(teamKey==='a'?teams[0]:teams[1])}</h3></div><div class="nlp-side"><span>Starts</span><b>Hole ${p.fromHole}</b></div><div class="nlp-side"><span>${pressState.played===seg.holes.filter(x=>x>=+p.fromHole).length?'Final':'Standing'}</span><b>${teamPosition(pressState,teamKey)}</b></div><div class="nlp-side"><span>Wager</span><b>${p.amount}</b></div></div>`;
+    const historyCard=(p)=>{
+      const hseg=segments[+p.segment]; if(!hseg)return '';
+      const hteams=nassauTeams(roundGroupNames(r,g),hseg.pairing);
+      const standing=pressStanding(r,g,hseg,p);
+      const label=p.parentPressId?'PRESS THE PRESS':'PRESS';
+      return `<div class="nlp-wager-card recorded"><div><span class="nlp-bet-label">${label}</span><h3>${shortTeam(p.pressedBy==='a'?hteams[0]:hteams[1])}</h3></div><div class="nlp-side"><span>Starts</span><b>Hole ${p.fromHole}</b></div><div class="nlp-side"><span>${standing.played===hseg.holes.filter(x=>x>=+p.fromHole).length?'Final':'Standing'}</span><b>${teamPosition(standing,p.pressedBy)}</b></div><div class="nlp-side"><span>Wager</span><b>${p.amount}</b></div></div>`;
+    };
 
     if(activePress){
       cards.push(wagerCard('PRESS',activePress,activePress.pressedBy,activeStanding));
@@ -163,6 +170,12 @@
       }
     }else if(nextHole!==null&&nextHole!==firstHole){
       cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS</span><h3>${losingTeam?shortTeam(losingTeam):'No team eligible'}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>Current Match</span><b>${viewedStanding.loser?`${shortTeam(viewedStanding.loser==='a'?teams[0]:teams[1])} ${viewedStanding.margin} down`:'All square'}</b></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div>${losingTeam?`<button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press</button>`:''}</div>`);
+    }
+    const historicalPresses=c.presses
+      .filter(p=>+p.segment!==si && +p.fromHole<=h)
+      .sort((a,b)=>(+a.fromHole)-(+b.fromHole));
+    if(historicalPresses.length){
+      cards.unshift(...historicalPresses.map(historyCard).filter(Boolean));
     }
     const statusHtml=`<section class="card nlp-match-status"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Match Status</h2><div class="nlp-overall"><span>Current Standing</span><b>${overallMatchText(viewedStanding,teams)}</b></div></section>`;
     const scoreCard=scoreSide.closest('.card')||app.querySelector('.card');
