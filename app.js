@@ -938,7 +938,7 @@ function board(){
             <tr>
               <th>Pos</th>
               <th>Golfer</th>
-              <th>Movement</th>
+              <th>Change</th>
               <th>Best 3</th>
               <th>R1</th>
               <th>R2</th>
