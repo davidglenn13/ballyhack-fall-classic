@@ -1,6 +1,10 @@
 /* Nassau wager and press entry directly on live Score page for 5-5-5-3 and 6-6-6. */
 (() => {
-  const hasNassau=(r,g)=>!!(state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)]);
+  const hasNassau=(r,g)=>{
+    const grouped=state.nassauGroups?.[r]?.[g]||state.nassauGroups?.[String(r)]?.[String(g)];
+    const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)];
+    return !!(grouped||Number(bet?.value||0)>0||(Array.isArray(bet?.presses)&&bet.presses.length));
+  };
   const segmentsFor=(r,g)=>typeof window.nassauSegmentsFor==='function'?window.nassauSegmentsFor(r,g):NASSAU_SEGMENTS;
   const formatFor=(r,g)=>typeof window.nassauFormatFor==='function'?window.nassauFormatFor(r,g):'Nassau 5-5-5-3';
   const cfg=(r,g)=>{
@@ -127,10 +131,7 @@
     }
     addWagerToPicker(r,g);
     const existingCard=app.querySelector('.nlp-card');
-    if(existingCard){
-      moveSelectedPicker(r,g,existingCard);
-      return;
-    }
+    if(existingCard)existingCard.remove();
     const segments=segmentsFor(r,g),si=segments.findIndex(s=>s.holes.includes(h)); if(si<0)return;
     const seg=segments[si],teams=nassauTeams(roundGroupNames(r,g),seg.pairing),c=cfg(r,g),fmt=formatFor(r,g);
     const firstHole=seg.holes[0],nextHole=nextUnplayedHole(r,g,seg),singleHole=!!seg.singleHole;
