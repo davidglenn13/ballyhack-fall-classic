@@ -62,7 +62,8 @@
   function displayGameForScore(r,g){
     const roundGame=state.sideGames?.[r]||'None';
     if(roundGame===FORTY)return FORTY;
-    return formatFor(r,g)||'None';
+    if(roundGame==='None')return 'None';
+    return formatFor(r,g)||roundGame||'None';
   }
 
   function clearFortyWager(r){
@@ -157,7 +158,7 @@
     }
     if(state.sideGames?.[r]===FORTY){
       note.textContent='40 Ball applies to both groups for the round.';
-    }else if(fmt){
+    }else if(state.sideGames?.[r]!=='None'&&fmt){
       note.textContent=fmt===N55
         ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16, 17 and 18 are separate one-hole matches.'
         :`${fmt} is active only for this foursome.`;
