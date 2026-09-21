@@ -930,7 +930,7 @@ function board(){
         <br>
       </div>
 
-      ${privacy?`<div class="permission-note">40 Ball privacy is active. Your group’s current-round scoring is visible; the other group’s current-round scoring, position, movement, and Best 3 are hidden until the round is complete.</div>`:''}
+      ${privacy?`<div class="permission-note">40 Ball privacy is active. The other group’s current-round scoring, position, movement, and Best 3 are hidden until the round is complete.</div>`:''}
 
       <div class="table-wrap">
         <table>
