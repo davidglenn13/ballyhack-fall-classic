@@ -210,6 +210,24 @@
     return layout(ledgerHtml());
   }
 
+  let ledgerRefreshTimer=null;
+  function startLedgerRefresh(){
+    if(ledgerRefreshTimer)return;
+    ledgerRefreshTimer=setInterval(async()=>{
+      if(tab!==TAB||document.visibilityState!=='visible')return;
+      const ok=await loadShared();
+      if(ok&&tab===TAB){
+        document.querySelector('#app').innerHTML=ledgerPage();
+        ensureLedgerNav();
+      }
+    },3000);
+  }
+  function stopLedgerRefresh(){
+    if(!ledgerRefreshTimer)return;
+    clearInterval(ledgerRefreshTimer);
+    ledgerRefreshTimer=null;
+  }
+
   function ensureLedgerNav(){
     const nav=document.querySelector('#nav');
     if(!nav)return;
@@ -255,11 +273,20 @@
   const prior=render;render=function(){
     ensureLedgerNav();
     if(tab===TAB){
+      startLedgerRefresh();
       document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===TAB));
       document.querySelector('#app').innerHTML=ledgerPage();
       ensureLedgerNav();
+      // Refresh immediately from shared state as well as on the 3-second live loop.
+      loadShared().then(ok=>{
+        if(ok&&tab===TAB){
+          document.querySelector('#app').innerHTML=ledgerPage();
+          ensureLedgerNav();
+        }
+      });
       return;
     }
+    stopLedgerRefresh();
     prior();
     setTimeout(enhance,0);
   };
