@@ -213,11 +213,36 @@ function defaultRoundForToday(){
 function setDailyScoreRound(){
   const day=easternDateKey();
 
-  if(sessionStorage.scoreRoundDate===day)return;
+  if(
+    sessionStorage.scoreRoundDate===day&&
+    sessionStorage.r&&
+    sessionStorage.group&&
+    sessionStorage.hole
+  )return;
+
+  const r=defaultRoundForToday();
+  const user=currentUser();
+  let g=+(sessionStorage.group||1);
+
+  if(user){
+    if(roundGroupNames(r,1).includes(user))g=1;
+    else if(roundGroupNames(r,2).includes(user))g=2;
+  }
+
+  const names=roundGroupNames(r,g);
+  let h=18;
+
+  for(let hole=1;hole<=18;hole++){
+    if(names.some(n=>+(state.scores?.[r]?.[n]?.[hole]||0)<=0)){
+      h=hole;
+      break;
+    }
+  }
 
   sessionStorage.scoreRoundDate=day;
-  sessionStorage.r=defaultRoundForToday();
-  sessionStorage.hole=1;
+  sessionStorage.r=String(r);
+  sessionStorage.group=String(g);
+  sessionStorage.hole=String(h);
 }
 
 function chaseTotal(x,n){
