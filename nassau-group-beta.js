@@ -159,17 +159,18 @@
     const picker=sel.closest('.side-game-picker');
     const displayed=sel.value;
     const isNassau=displayed===N55||displayed===N66||displayed===LEGACY_N55;
-    if(isNassau){
-      let wager=picker?.querySelector('.nlp-wager');
-      if(!wager&&picker){
+    if(isNassau&&picker){
+      let row=picker.querySelector(':scope > .side-game-wager-row');
+      if(!row){
+        row=document.createElement('div');
+        row.className='side-game-wager-row';
+        picker.appendChild(row);
+      }
+      let wager=picker.querySelector('.nlp-wager');
+      if(wager&&wager.parentElement!==row)row.appendChild(wager);
+      if(!wager){
         const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0};
         const value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?Number(bet.value||0):0;
-        let row=picker.querySelector('.side-game-wager-row');
-        if(!row){
-          row=document.createElement('div');
-          row.className='side-game-wager-row';
-          picker.appendChild(row);
-        }
         row.innerHTML=`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`;
       }
     }else{
