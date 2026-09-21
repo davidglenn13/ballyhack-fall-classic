@@ -167,7 +167,7 @@
       pairings.textContent='';
     }else if(state.sideGames?.[r]!=='None'&&fmt){
       note.textContent=fmt===N55
-        ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16, 17 and 18 are separate one-hole matches.'
+        ?'Nassau 5-5-5-1-1-1 is active for this foursome. Holes 16–18 repeat the pairing order.'
         :`${fmt} is active only for this foursome.`;
       pairings.innerHTML='<b>Pairings</b>'+segmentsFor(r,g).map(seg=>{
         const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
