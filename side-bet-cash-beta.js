@@ -161,7 +161,7 @@
     });
     const final=any&&wagerRounds.every(r=>typeof roundFullyEntered==='function'&&roundFullyEntered(r));
     const statusClass=final?'is-final':'is-live';
-    const statusText=final?'SETTLEMENT COMPLETE':'LIVE · ESTIMATED';
+    const statusText=final?'SETTLEMENT COMPLETE':'LIVE SETTLEMENT';
     const summary=pay.length
       ?pay.map(x=>`<div class="sbc-final-pay"><div><b>${x.from}</b><span> pays </span><b>${x.to}</b></div><strong>${money(x.amount)}</strong></div>`).join('')
       :`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Completed results will populate here automatically.'}</p>`;
