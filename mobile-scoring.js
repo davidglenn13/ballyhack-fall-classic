@@ -21,13 +21,7 @@
     const head=card.querySelector('.scoring-head');
     const sync=card.querySelector('.sync-panel');
     if(head&&sync){
-      const title=head.querySelector('h2');
-      if(title&&typeof currentUser==='function'&&!head.querySelector('.score-signed-in')){
-        const user=document.createElement('span');
-        user.className='score-signed-in';
-        user.textContent=currentUser();
-        title.insertAdjacentElement('afterend',user);
-      }
+      head.querySelector('.score-signed-in')?.remove();
       head.appendChild(sync);
     }
 
