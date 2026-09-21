@@ -1,5 +1,5 @@
 const PLAYERS=[
-{name:'Tyler Bohannon',hi:12.8,ch:15,cottage:2},{name:'Nick Condeni',hi:5.6,ch:6,cottage:1},{name:'David Glenn',hi:11.9,ch:14,cottage:1},{name:'Scott Karl',hi:8.9,ch:10,cottage:2},{name:'Will Long',hi:10.2,ch:12,cottage:2},{name:'Bill McCombs',hi:13.4,ch:16,cottage:2},{name:'Joe Phelan',hi:14.0,ch:17,cottage:1},{name:'Jason Wain',hi:14.7,ch:18,cottage:1}
+{name:'Tyler Bohannon',hi:12.8,ch:16,cottage:2},{name:'Nick Condeni',hi:5.6,ch:6,cottage:1},{name:'David Glenn',hi:11.9,ch:14,cottage:1},{name:'Scott Karl',hi:8.9,ch:10,cottage:2},{name:'Will Long',hi:10.2,ch:12,cottage:2},{name:'Bill McCombs',hi:13.4,ch:16,cottage:2},{name:'Joe Phelan',hi:14.0,ch:17,cottage:1},{name:'Jason Wain',hi:14.7,ch:18,cottage:1}
 ];
 const PAR=[4,5,3,4,4,4,3,4,5,5,4,4,3,4,5,4,3,4];
 const SI=[3,11,15,1,5,13,17,9,7,12,14,4,16,6,10,2,18,8];
