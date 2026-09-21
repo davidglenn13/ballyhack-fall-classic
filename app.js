@@ -908,9 +908,10 @@ function board(){
       <tr class="${!privacy&&i<3?'winner':''}">
         <td><span class="rank">${privacy?'—':i+1}</span></td>
         <td>
-          <div class="board-player">
+          <div class="board-player standings-player">
             ${avatar(x.p.name)}
-            <span>${x.p.name}</span>
+            <span class="standings-name-full">${x.p.name}</span>
+            <span class="standings-name-short">${x.p.name.split(' ').pop()}</span>
           </div>
         </td>
         <td><b>${m.label}</b></td>
@@ -930,16 +931,16 @@ function board(){
         <br>
       </div>
 
-      ${privacy?`<div class="permission-note">40 Ball privacy is active. The other group’s current-round scoring, position, movement, and Best 3 are hidden until the round is complete.</div>`:''}
+      ${privacy?`<div class="permission-note">40 Ball privacy is active. The other group’s current-round scoring, position, change, and Best 3 are hidden until the round is complete.</div>`:''}
 
-      <div class="table-wrap">
-        <table>
+      <div class="table-wrap standings-table-wrap">
+        <table class="standings-table">
           <thead>
             <tr>
               <th>Pos</th>
               <th>Golfer</th>
-              <th>Change</th>
-              <th>Best 3</th>
+              <th class="change-col" aria-label="Change" title="Change">▲▼</th>
+              <th><span class="best3-full">Best 3</span><span class="best3-short">B3</span></th>
               <th>R1</th>
               <th>R2</th>
               <th>R3</th>
