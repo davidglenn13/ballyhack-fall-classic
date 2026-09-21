@@ -25,7 +25,7 @@
 
   function liveStanding(r,g,seg,throughHole=null){
     const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
-    let aWins=0,bWins=0,played=0;
+    let aWins=0,bWins=0,halves=0,played=0;
     const holes=seg.holes.map(h=>{
       if(throughHole!==null&&h>throughHole)return {h,status:'pending'};
       const aVals=teams[0].map(n=>netScore(r,n,h)).filter(v=>v!==null);
@@ -35,16 +35,17 @@
       const a=Math.min(...aVals),b=Math.min(...bVals);
       if(a<b){aWins++;return {h,a,b,status:'a'};}
       if(b<a){bWins++;return {h,a,b,status:'b'};}
-      return {h,a,b,status:'half'};
+      halves++;return {h,a,b,status:'half'};
     });
+    const x={teams,aWins,bWins,halves,played,total:seg.holes.length,holes};
     const margin=Math.abs(aWins-bWins);
     const loser=!played||aWins===bWins?null:(aWins<bWins?'a':'b');
-    return {x:{teams,aWins,bWins,played,holes},margin,loser};
+    return {x,margin,loser};
   }
-  function pressStanding(r,g,seg,p,throughHole=null){
+  function pressStanding(r,g,seg,p){
     const teams=nassauTeams(roundGroupNames(r,g),seg.pairing);
     let aWins=0,bWins=0,played=0;
-    for(const hole of seg.holes.filter(x=>x>=+p.fromHole&&(throughHole===null||x<=throughHole))){
+    for(const hole of seg.holes.filter(x=>x>=+p.fromHole)){
       if(!holeComplete(r,g,hole))continue;
       const a=teams[0].map(n=>netScore(r,n,hole)),b=teams[1].map(n=>netScore(r,n,hole));
       if(a.some(x=>x===null)||b.some(x=>x===null))continue;
@@ -60,12 +61,6 @@
     const teamAhead=(team==='a'&&standing.margin>0)||(team==='b'&&standing.margin<0);
     const margin=Math.abs(standing.margin);
     return `${margin} hole${margin===1?'':'s'} ${teamAhead?'up':'down'}`;
-  }
-  function currentMatchText(viewedStanding,teams){
-    if(!viewedStanding?.x?.played)return 'Not started';
-    if(!viewedStanding.margin)return 'All square';
-    const down=viewedStanding.loser==='a'?teams[0]:teams[1];
-    return `${shortTeam(down)} ${viewedStanding.margin} down`;
   }
   function holeComplete(r,g,h){ return roundGroupNames(r,g).every(n=>+state.scores?.[r]?.[n]?.[h]>0); }
   function nextUnplayedHole(r,g,seg){ return seg.holes.find(h=>!holeComplete(r,g,h)) ?? null; }
@@ -137,32 +132,29 @@
     const firstHole=seg.holes[0],nextHole=nextUnplayedHole(r,g,seg),singleHole=!!seg.singleHole;
     sanitizePresses(r,g,si,seg,c,nextHole);
 
+    const isFirstHole=h===firstHole,isNextHole=h===nextHole;
     const currentStanding=liveStanding(r,g,seg);
     const viewedStanding=liveStanding(r,g,seg,h);
     const segmentPresses=c.presses.filter(p=>+p.segment===si),activePress=originalPressInSegment(c,si),counterPress=counterPressFor(c,activePress),pressRecorded=!!activePress,counterRecorded=!!counterPress;
-    // Historical hole browsing only changes the displayed standing. Press
-    // availability is always based on the actual next unplayed hole so the
-    // live Press action does not disappear when reviewing earlier holes.
     const loser=(!singleHole&&!pressRecorded&&nextHole!==null&&nextHole!==firstHole)?currentStanding.loser:null;
     const losingTeam=loser==='a'?teams[0]:loser==='b'?teams[1]:null;
     const counterTeamKey=activePress?(activePress.pressedBy==='a'?'b':'a'):null;
     const counterTeam=counterTeamKey?(counterTeamKey==='a'?teams[0]:teams[1]):null;
-    const activeStanding=activePress?pressStanding(r,g,seg,activePress,h):null;
+    const activeStanding=activePress?pressStanding(r,g,seg,activePress):null;
 
     if(singleHole)return;
     const cards=[];
-    cards.push(`<div class="nlp-wager-card match-status"><div><span class="nlp-bet-label">CURRENT MATCH</span><h3>${shortTeam(teams[0])} vs ${shortTeam(teams[1])}</h3></div><div class="nlp-side"><span>Through</span><b>${viewedStanding.x.played?'Hole '+viewedStanding.x.holes.filter(x=>x.status!=='pending').slice(-1)[0]?.h:'Not started'}</b></div><div class="nlp-side"><span>Standing</span><b>${currentMatchText(viewedStanding,teams)}</b></div><div class="nlp-side"><span>Next Hole</span><b>${nextHole===null?'Complete':'Hole '+nextHole}</b></div></div>`);
-    const wagerCard=(label,p,teamKey,pressState)=>`<div class="nlp-wager-card recorded"><div><span class="nlp-bet-label">${label}</span><h3>${shortTeam(teamKey==='a'?teams[0]:teams[1])}</h3></div><div class="nlp-side"><span>Starts</span><b>Hole ${p.fromHole}</b></div><div class="nlp-side"><span>${pressState.played===seg.holes.filter(x=>x>=+p.fromHole).length?'Final':'Standing'}</span><b>${teamPosition(pressState,teamKey)}</b></div><div class="nlp-side"><span>Wager</span><b>${p.amount}</b></div></div>`;
+    const wagerCard=(label,p,teamKey,pressState)=>`<div class="nlp-wager-card recorded"><div><span class="nlp-bet-label">${label}</span><h3>${shortTeam(teamKey==='a'?teams[0]:teams[1])}</h3></div><div class="nlp-side"><span>Starts</span><b>Hole ${p.fromHole}</b></div><div class="nlp-side"><span>${pressState.played===seg.holes.filter(x=>x>=+p.fromHole).length?'Final':'Standing'}</span><b>${teamPosition(pressState,teamKey)}</b></div><div class="nlp-side"><span>Wager</span><b>$${p.amount}</b></div></div>`;
 
     if(activePress){
       cards.push(wagerCard('PRESS',activePress,activePress.pressedBy,activeStanding));
       if(counterPress){
-        cards.push(wagerCard('PRESS THE PRESS',counterPress,counterPress.pressedBy,pressStanding(r,g,seg,counterPress,h)));
+        cards.push(wagerCard('PRESS THE PRESS',counterPress,counterPress.pressedBy,pressStanding(r,g,seg,counterPress)));
       }else if(nextHole!==null&&nextHole>=+activePress.fromHole){
         cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS THE PRESS</span><h3>${shortTeam(counterTeam)}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div><div class="nlp-side"><span>Remaining Holes</span><b>${seg.holes.filter(x=>x>=nextHole).length}</b></div><button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press the Press</button></div>`);
       }
     }else if(nextHole!==null&&nextHole!==firstHole){
-      cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS</span><h3>${losingTeam?shortTeam(losingTeam):'No team eligible'}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>Current Match</span><b>${losingTeam?`${shortTeam(losingTeam)} ${currentStanding.margin} down`:'All square'}</b></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div>${losingTeam?`<button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press</button>`:''}</div>`);
+      cards.push(`<div class="nlp-wager-card available"><div><span class="nlp-bet-label">PRESS</span><h3>${losingTeam?shortTeam(losingTeam):'No team eligible'}</h3><small data-nlp-base>Wager: ${c.value?'$'+c.value:'not entered'}</small></div><div class="nlp-side"><span>Current Match</span><b>${viewedStanding.loser?`${shortTeam(viewedStanding.loser==='a'?teams[0]:teams[1])} ${viewedStanding.margin} down`:'All square'}</b></div><div class="nlp-side"><span>New Bet Starts</span><b>Hole ${nextHole}</b></div>${losingTeam?`<button type="button" class="primary" data-nlp-add data-r="${r}" data-g="${g}" data-si="${si}" data-hole="${nextHole}" ${c.value?'':'disabled'}>Press</button>`:''}</div>`);
     }
     if(!cards.length){ moveSelectedPicker(r,g,scoreSide.closest('.card')||app.querySelector('.card')); return; }
     const html=`<section class="card nlp-card"><div class="eyebrow">LIVE NASSAU · ${fmt.replace('Nassau ','')}</div><h2>Press Wagers</h2><p class="muted">Each wager is separate and runs from its starting hole through the end of ${seg.label}.</p><div class="nlp-wagers">${cards.join('')}</div>${!c.value?'<p class="notice" data-nlp-hint>Set Wager Amount in the Side Game selection above to activate Press.</p>':''}</section>`;
@@ -174,7 +166,7 @@
 
   function style(){
     if(document.querySelector('#nlp-style'))return;
-    const s=document.createElement('style');s.id='nlp-style';s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.side-game-picker-detached{grid-column:span 12;width:100%;max-width:none;margin-top:14px;padding:14px;border:2px solid var(--navy);border-radius:10px;background:#fff;color:var(--navy)}.side-game-picker-detached .wager-next{display:block;font-size:15px;font-weight:900;color:var(--navy)}.side-game-picker-detached .wager-entry{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:20px}.side-game-picker-detached .wager-entry input{flex:1;min-width:0;width:100%;padding:10px 0;border:0;outline:0;background:transparent;font-size:20px}.nlp-pairings{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-size:11px;line-height:1.45;color:var(--muted)}.nlp-pairings b{display:block;margin-bottom:3px;color:var(--navy);font-size:10px;letter-spacing:.05em;text-transform:uppercase}.nlp-pairings span{display:block}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-wagers{display:grid;gap:10px;margin-top:14px}.nlp-wager-card{display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(2,minmax(100px,1fr)) auto;gap:10px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff}.nlp-wager-card.match-status{border-left:5px solid #17365d;background:#f8fafc}.nlp-wager-card.recorded{border-left:5px solid #17365d}.nlp-wager-card.available{border-left:5px solid #e11}.nlp-bet-label{display:block;color:#e11;font-size:10px;font-weight:900;letter-spacing:.08em}.nlp-wager-card h3{margin:3px 0 0}.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted);padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-wager-card button{min-width:140px}.nlp-wager-card button:disabled{opacity:.5}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-wager{max-width:none}.nlp-wager-card{grid-template-columns:1fr 1fr}.nlp-wager-card>div:first-child{grid-column:1/3}.nlp-wager-card button{grid-column:1/3;width:100%}}`;document.head.appendChild(s);
+    const s=document.createElement('style');s.id='nlp-style';s.textContent=`.nlp-wager{display:grid;gap:4px;margin-top:8px;font-size:10px;font-weight:800;color:var(--muted);max-width:160px}.nlp-wager input{width:100%;font-size:16px;font-weight:900}.side-game-picker-detached{grid-column:span 12;width:100%;max-width:none;margin-top:14px;padding:14px;border:2px solid var(--navy);border-radius:10px;background:#fff;color:var(--navy)}.side-game-picker-detached .wager-next{display:block;font-size:15px;font-weight:900;color:var(--navy)}.side-game-picker-detached .wager-entry{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:20px}.side-game-picker-detached .wager-entry input{flex:1;min-width:0;width:100%;padding:10px 0;border:0;outline:0;background:transparent;font-size:20px}.nlp-pairings{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-size:11px;line-height:1.45;color:var(--muted)}.nlp-pairings b{display:block;margin-bottom:3px;color:var(--navy);font-size:10px;letter-spacing:.05em;text-transform:uppercase}.nlp-pairings span{display:block}.nlp-card{border:2px solid rgba(23,54,93,.18)}.nlp-card h2{margin-bottom:4px}.nlp-wagers{display:grid;gap:10px;margin-top:14px}.nlp-wager-card{display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(2,minmax(100px,1fr)) auto;gap:10px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff}.nlp-wager-card.recorded{border-left:5px solid #17365d}.nlp-wager-card.available{border-left:5px solid #e11}.nlp-bet-label{display:block;color:#e11;font-size:10px;font-weight:900;letter-spacing:.08em}.nlp-wager-card h3{margin:3px 0 0}.nlp-side{display:grid;gap:4px;font-size:10px;font-weight:800;color:var(--muted);padding:9px 10px;border:1px solid var(--line);border-radius:8px}.nlp-side b{font-size:13px;color:var(--text)}.nlp-wager-card button{min-width:140px}.nlp-wager-card button:disabled{opacity:.5}.side-result-panel .nb-controls{grid-template-columns:1fr}@media(max-width:650px){.nlp-wager{max-width:none}.nlp-wager-card{grid-template-columns:1fr 1fr}.nlp-wager-card>div:first-child{grid-column:1/3}.nlp-wager-card button{grid-column:1/3;width:100%}}`;document.head.appendChild(s);
   }
 
   document.addEventListener('input',e=>{const w=e.target.closest?.('[data-nlp-wager]');if(!w)return;w.value=w.value.replace(/\D/g,'').slice(0,4);const c=cfg(+w.dataset.r,+w.dataset.g);c.value=+w.value||0;c.presses.forEach(p=>p.amount=c.value);w.closest('.nlp-wager')?.classList.toggle('needs-wager',!c.value);save();const card=document.querySelector('.nlp-card');card?.querySelectorAll('[data-nlp-add]').forEach(b=>b.disabled=!c.value);card?.querySelectorAll('[data-nlp-base]').forEach(el=>el.textContent=`Wager: ${c.value?'$'+c.value:'not entered'}`);const hint=card?.querySelector('[data-nlp-hint]');if(hint)hint.hidden=!!c.value;});
