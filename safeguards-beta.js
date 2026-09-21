@@ -177,6 +177,15 @@ loadShared=async()=>{
     });
     if(!response.ok)throw new Error('API '+response.status);
     const remote=await response.json();
+    if(remote?.safeguards?.authenticated===false&&authToken()){
+      forgetRememberedToken();
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(PLAYER_KEY);
+      setQueue([]);
+      setSync('PIN sign-in required','bad');
+      location.reload();
+      return false;
+    }
     state={
       ...state,
       ...remote,
