@@ -167,3 +167,32 @@
   .mobile-game-summary>span{flex:1;min-width:0}
   .side-game-picker.mobile-game-saved .mobile-game-summary .mobile-game-edit{width:auto;min-width:72px;flex:0 0 auto;padding:8px 12px}
 }
+
+
+/* Compact live standings so all four rounds fit on mobile */
+.standings-table-wrap{overflow-x:hidden}
+.standings-table{table-layout:fixed;width:100%;font-size:12px}
+.standings-table th,.standings-table td{padding:7px 5px;white-space:nowrap;text-align:center}
+.standings-table th:nth-child(1),.standings-table td:nth-child(1){width:42px}
+.standings-table th:nth-child(2),.standings-table td:nth-child(2){width:180px;text-align:left}
+.standings-table th:nth-child(3),.standings-table td:nth-child(3){width:48px}
+.standings-table th:nth-child(4),.standings-table td:nth-child(4){width:52px}
+.standings-table th:nth-child(n+5),.standings-table td:nth-child(n+5){width:42px}
+.standings-name-short,.best3-short{display:none}
+
+@media(max-width:640px){
+  .standings-table{font-size:11px}
+  .standings-table th,.standings-table td{padding:6px 2px}
+  .standings-table th:nth-child(1),.standings-table td:nth-child(1){width:28px}
+  .standings-table th:nth-child(2),.standings-table td:nth-child(2){width:92px}
+  .standings-table th:nth-child(3),.standings-table td:nth-child(3){width:28px}
+  .standings-table th:nth-child(4),.standings-table td:nth-child(4){width:30px}
+  .standings-table th:nth-child(n+5),.standings-table td:nth-child(n+5){width:28px}
+  .standings-table .rank{font-size:15px}
+  .standings-table .standings-player{gap:4px;min-width:0}
+  .standings-table .standings-player .player-avatar{width:24px;height:24px;flex:0 0 24px}
+  .standings-name-full,.best3-full{display:none}
+  .standings-name-short,.best3-short{display:inline}
+  .standings-name-short{overflow:hidden;text-overflow:ellipsis}
+  .standings-table .change-col{font-size:9px;letter-spacing:-2px}
+}
