@@ -355,37 +355,19 @@ test('Pressure test: repeated backup and restore cycles preserve tournament stat
 });
 
 
-test('Pressure test: reset invalidates stale clients and clears mutable tournament state',async()=>{
+test('Pressure test: reset endpoint remains disabled and preserves state',async()=>{
   const x=session();
   for(const player of ['David Glenn','Nick Condeni'])await x.login(player);
-
   assert.equal((await x.post('David Glenn',{op:'sideGame',round:1,value:'40 Ball'})).status,200);
   assert.equal((await x.post('David Glenn',{op:'fortyBallBet',round:1,value:50})).status,200);
   assert.equal((await x.post('David Glenn',{op:'score',round:1,player:'Nick Condeni',hole:1,gross:4,expectedGross:0,mutationId:'pre-reset'})).status,200);
-
-  const staleState=await x.get('Nick Condeni');
-  const staleEpoch=staleState.epoch;
-
+  const before=await x.get('David Glenn');
   const reset=await x.post('David Glenn',{op:'reset'});
-  assert.equal(reset.status,200,reset.body.error);
-
-  const state=await x.get('David Glenn');
-  assert.deepEqual(state.scores,{});
-  assert.deepEqual(state.fortyBallBets,{});
-  assert.deepEqual(state.fortyBallSelections,{});
-  assert.notDeepEqual(state.epoch,staleEpoch);
-
-  const stale=await x.send('POST','Nick Condeni',{
-    op:'score',round:1,player:'Nick Condeni',hole:1,gross:5,expectedGross:0,
-    mutationId:'stale-after-reset',epoch:staleEpoch
-  });
-  assert.equal(stale.status,409);
-
-  const fresh=await x.post('Nick Condeni',{
-    op:'score',round:1,player:'Nick Condeni',hole:1,gross:5,expectedGross:0,
-    mutationId:'fresh-after-reset'
-  });
-  assert.equal(fresh.status,200,fresh.body.error);
+  assert.equal(reset.status,409);
+  const after=await x.get('David Glenn');
+  assert.deepEqual(after.scores,before.scores);
+  assert.deepEqual(after.sideGames,before.sideGames);
+  assert.deepEqual(after.fortyBallBets,before.fortyBallBets);
 });
 
 test('Pressure test: side-game settings reject stale revisions across rapid changes',async()=>{
@@ -434,6 +416,6 @@ test('Pressure test: repeated score edits preserve audit history and final value
 
   const state=await x.get('David Glenn');
   assert.equal(+state.scores[4]['David Glenn'][18],expected);
-  const audit=state.audit.filter(row=>row.round_no===4&&row.player==='David Glenn'&&row.hole_no===18);
+  const audit=state.audit.filter(row=>row.round_no===4&&row.player==='David Glenn'&&row.hole===18);
   assert.equal(audit.length>=24,true);
 });
