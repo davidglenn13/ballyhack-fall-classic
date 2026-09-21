@@ -97,8 +97,14 @@
     const selected=scoreSide?.value||state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
     const isNassau=selected==='Nassau 5-5-5-1-1-1'||selected==='Nassau 5-5-5-3'||selected==='Nassau 6-6-6';
     if(!picker||!scoreSide||!isNassau||picker.querySelector('.nlp-wager'))return;
-    const c=cfg(r,g),value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?c.value:0,host=scoreSide.closest('div')||picker;
-    host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
+    const c=cfg(r,g),value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?c.value:0;
+    let row=picker.querySelector('.side-game-wager-row');
+    if(!row){
+      row=document.createElement('div');
+      row.className='side-game-wager-row';
+      picker.appendChild(row);
+    }
+    row.innerHTML=`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`;
   }
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
   function pairingSummary(r,g){
