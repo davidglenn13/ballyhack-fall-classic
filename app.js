@@ -210,6 +210,36 @@ function defaultRoundForToday(){
   return 4;
 }
 
+function scoreLocationKey(user=currentUser()){
+  return 'ballyhack-score-location-v1-'+encodeURIComponent(user||'guest');
+}
+
+function persistScoreLocation(){
+  const user=currentUser();
+  if(!user||tab!=='Score')return;
+  const round=+(sessionStorage.r||0),group=+(sessionStorage.group||0),hole=+(sessionStorage.hole||0);
+  if(!(round>=1&&round<=4&&group>=1&&group<=2&&hole>=1&&hole<=18))return;
+  localStorage.setItem(scoreLocationKey(user),JSON.stringify({
+    day:easternDateKey(),
+    round,
+    group,
+    hole
+  }));
+}
+
+function savedScoreLocation(user=currentUser()){
+  try{
+    const saved=JSON.parse(localStorage.getItem(scoreLocationKey(user))||'null');
+    if(!saved||saved.day!==easternDateKey())return null;
+    const round=+saved.round,group=+saved.group,hole=+saved.hole;
+    if(!(round>=1&&round<=4&&group>=1&&group<=2&&hole>=1&&hole<=18))return null;
+    if(user!=='David Glenn'&&!roundGroupNames(round,group).includes(user))return null;
+    return {round,group,hole};
+  }catch{
+    return null;
+  }
+}
+
 function setDailyScoreRound(){
   const day=easternDateKey();
 
@@ -220,8 +250,17 @@ function setDailyScoreRound(){
     sessionStorage.hole
   )return;
 
-  const r=defaultRoundForToday();
   const user=currentUser();
+  const saved=savedScoreLocation(user);
+  if(saved){
+    sessionStorage.scoreRoundDate=day;
+    sessionStorage.r=String(saved.round);
+    sessionStorage.group=String(saved.group);
+    sessionStorage.hole=String(saved.hole);
+    return;
+  }
+
+  const r=defaultRoundForToday();
   let g=+(sessionStorage.group||1);
 
   if(user){
@@ -243,6 +282,7 @@ function setDailyScoreRound(){
   sessionStorage.r=String(r);
   sessionStorage.group=String(g);
   sessionStorage.hole=String(h);
+  persistScoreLocation();
 }
 
 function chaseTotal(x,n){
@@ -1413,6 +1453,7 @@ function render(){
   document.querySelector('#app').innerHTML=fn();
 
   bind();
+  persistScoreLocation();
 }
 
 function bind(){
