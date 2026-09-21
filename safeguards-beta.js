@@ -53,6 +53,7 @@ const originalRender=render;
 
 function authToken(){return sessionStorage.getItem(TOKEN_KEY)||''}
 function switchPlayer(){
+  if(typeof persistScoreLocation==='function')persistScoreLocation();
   forgetRememberedToken();
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(PLAYER_KEY);
@@ -255,6 +256,16 @@ function firstMissingScore(round,group){
   return null;
 }
 function setScoreLanding(player){
+  const saved=typeof savedScoreLocation==='function'?savedScoreLocation(player):null;
+  if(saved){
+    sessionStorage.r=String(saved.round);
+    sessionStorage.group=String(saved.group);
+    sessionStorage.hole=String(saved.hole);
+    sessionStorage.scoreRoundDate=easternDateKey();
+    tab='Score';
+    return;
+  }
+
   const round=defaultRoundForToday();
   const group=roundGroupNames(round,1).includes(player)?1:2;
   const missing=firstMissingScore(round,group);
@@ -263,6 +274,7 @@ function setScoreLanding(player){
   sessionStorage.hole=String(missing?.hole||18);
   sessionStorage.scoreRoundDate=easternDateKey();
   tab='Score';
+  if(typeof persistScoreLocation==='function')persistScoreLocation();
 }
 function focusMissingScore(missing){
   const input=[...document.querySelectorAll('[data-score-player]')].find(x=>
