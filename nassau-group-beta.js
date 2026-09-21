@@ -164,11 +164,16 @@
       if(!wager&&picker){
         const bet=state.nassauBets?.[r]?.[g]||state.nassauBets?.[String(r)]?.[String(g)]||{value:0};
         const value=typeof sideGameWasSelected==='function'&&sideGameWasSelected(r,g)?Number(bet.value||0):0;
-        const host=sel.closest('div')||picker;
-        host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
+        let row=picker.querySelector('.side-game-wager-row');
+        if(!row){
+          row=document.createElement('div');
+          row.className='side-game-wager-row';
+          picker.appendChild(row);
+        }
+        row.innerHTML=`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`;
       }
     }else{
-      picker?.querySelector('.nlp-wager')?.remove();
+      picker?.querySelector('.side-game-wager-row')?.remove();
     }
     const eyebrow=picker?.querySelector('.eyebrow');
     if(eyebrow) eyebrow.textContent=(state.sideGames?.[r]===FORTY)?'SIDE GAME FOR THIS ROUND':'SIDE GAME FOR THIS GROUP';
