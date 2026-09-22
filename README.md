@@ -17,6 +17,10 @@ This is a working mobile-first PWA prototype for the Sept. 30-Oct. 2, 2026 trip.
 - Trip settlement worksheet
 - Offline-capable PWA shell
 
+## Cloudflare environments
+- The beta Pages project deploys only from the `beta` branch and uses the isolated `ballyhack-beta` D1 database.
+- The production Pages project deploys only from `main` and uses the isolated `ballyhack-production` D1 database.
+
 ## Before deployment
 The prototype stores scoring in each browser with `localStorage`. For true multi-device live scoring, connect the state layer to Supabase/Firebase (or another hosted database), add authentication/admin permissions, and deploy to a secure HTTPS URL. Then insert that URL and its QR code into the trip document.
 
