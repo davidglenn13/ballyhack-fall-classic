@@ -1,5 +1,5 @@
 const PLAYERS=[
-{name:'Tyler Bohannon',hi:12.8,ch:16,cottage:2},{name:'Nick Condeni',hi:5.6,ch:6,cottage:1},{name:'David Glenn',hi:11.9,ch:14,cottage:1},{name:'Scott Karl',hi:7.9,ch:9,cottage:2},{name:'Will Long',hi:10.9,ch:13,cottage:2},{name:'Bill McCombs',hi:12.7,ch:15,cottage:2},{name:'Joe Phelan',hi:14.0,ch:17,cottage:1},{name:'Jason Wain',hi:14.7,ch:18,cottage:1}
+{name:'Tyler Bohannon',hi:12.8,ch:16,cottage:2},{name:'Nick Condeni',hi:5.6,ch:6,cottage:1},{name:'David Glenn',hi:11.9,ch:14,cottage:1},{name:'Scott Karl',hi:7.5,ch:9,cottage:2},{name:'Will Long',hi:10.7,ch:13,cottage:2},{name:'Bill McCombs',hi:12.7,ch:15,cottage:2},{name:'Joe Phelan',hi:14.0,ch:17,cottage:1},{name:'Jason Wain',hi:14.7,ch:18,cottage:1}
 ];
 const PAR=[4,5,3,4,4,4,3,4,5,5,4,4,3,4,5,4,3,4];
 const SI=[3,11,15,1,5,13,17,9,7,12,14,4,16,6,10,2,18,8];
@@ -11,6 +11,7 @@ const ROUNDS=[
 ];
 const key='ballyhack-fall-classic-2026-v2';
 const API='/api/secure-state';
+const INDEXES_FROZEN=true;
 
 let state=JSON.parse(localStorage.getItem(key)||'null')||{
   scores:{},
@@ -18,7 +19,7 @@ let state=JSON.parse(localStorage.getItem(key)||'null')||{
   access:{},
   sideGames:{1:'None',2:'None',3:'None',4:'None'},
   charges:{},
-  frozen:false,
+  frozen:true,
   photos:{}
 };
 
@@ -68,6 +69,7 @@ async function loadShared(){
       }
     };
 
+    state.frozen=INDEXES_FROZEN;
     save();
     return true
   }catch(e){
@@ -1395,18 +1397,16 @@ function admin(){
 
       <p>
         <b>Handicap state:</b>
-        ${state.frozen
+        ${INDEXES_FROZEN
           ?'Official indexes frozen'
           :'Provisional build indexes'}
       </p>
 
       <button
         class="primary"
-        id="freeze"
+        disabled
       >
-        ${state.frozen
-          ?'Unfreeze Indexes'
-          :'Freeze Indexes'}
+        Indexes Frozen
       </button>
 
       <p class="notice">
@@ -1725,18 +1725,6 @@ function bind(){
       input.click();
     });
 
-  document.querySelector('#freeze')
-    ?.addEventListener('click',()=>{
-      state.frozen=!state.frozen;
-      save();
-
-      apiPost({
-        op:'frozen',
-        value:state.frozen
-      });
-
-      render();
-    });
 
 }
 
