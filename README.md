@@ -23,3 +23,6 @@ The prototype stores scoring in each browser with `localStorage`. For true multi
 The header attempts to load Ballyhack's official goat logo from Dormie Network's public media asset; the packaged local goat event mark is the offline fallback.
 
 - Standings movement: Leaderboard and Chase show ▲ places gained, ▼ places lost, or — no change versus the prior completed round.
+Production deployment enabled
+
+
