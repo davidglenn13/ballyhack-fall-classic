@@ -9,7 +9,7 @@
   function roundNo(){ return +(sessionStorage.r||1); }
   function groupNo(){ return +(sessionStorage.group||1); }
   function active40(r=roundNo()){ return (state.sideGames?.[r]||'None')==='40 Ball'; }
-  function roundClosed(r=roundNo()){ return !!state.locks?.[r]?.[1]&&!!state.locks?.[r]?.[2]; }
+  function roundClosed(r=roundNo()){ return roundFullyEntered(r)||(!!state.locks?.[r]?.[1]&&!!state.locks?.[r]?.[2]); }
   function commissioner(){ return currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken(); }
   function ownGroup(r=roundNo()){
     if(roundGroupNames(r,1).includes(currentUser()))return 1;
