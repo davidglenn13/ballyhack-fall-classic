@@ -939,7 +939,8 @@ function score(){
 function active40Privacy(){
   if(currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken())return null;
   const r=+(sessionStorage.r||defaultRoundForToday());
-  if((state.sideGames?.[r]||'None')!=='40 Ball'||roundFullyEntered(r))return null;
+  const bothGroupsLocked=!!state.locks?.[r]?.[1]&&!!state.locks?.[r]?.[2];
+  if((state.sideGames?.[r]||'None')!=='40 Ball'||roundFullyEntered(r)||bothGroupsLocked)return null;
   const own=roundGroupNames(r,1).includes(currentUser())?1:
     roundGroupNames(r,2).includes(currentUser())?2:null;
   return own?{round:r,group:own}:null;
