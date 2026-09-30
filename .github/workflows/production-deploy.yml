@@ -1,0 +1,125 @@
+name: Deploy Cloudflare Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ballyhack-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_HINT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Discover Ballyhack production Pages project
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CF_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN secret is missing"
+            exit 1
+          fi
+          python3 <<'PY'
+          import json, os, urllib.request, urllib.error
+
+          token=os.environ["CF_TOKEN"]
+          hint=os.environ.get("CF_ACCOUNT_HINT","").strip()
+          headers={"Authorization":f"Bearer {token}","Content-Type":"application/json"}
+
+          def get(url):
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=30) as r:
+                  data=json.load(r)
+              if not data.get("success",True):
+                  raise RuntimeError(data)
+              return data
+
+          account_ids=[]
+          if hint:
+              account_ids=[hint]
+          else:
+              data=get("https://api.cloudflare.com/client/v4/accounts")
+              account_ids=[x["id"] for x in data.get("result",[])]
+
+          projects=[]
+          for account_id in account_ids:
+              try:
+                  data=get(f"https://api.cloudflare.com/client/v4/accounts/{account_id}/pages/projects")
+              except Exception as e:
+                  print(f"Could not list Pages projects for account {account_id}: {e}")
+                  continue
+              for p in data.get("result",[]):
+                  projects.append((account_id,p))
+                  print("Pages project:",p.get("name"),"subdomain:",p.get("subdomain"))
+
+          exact=[x for x in projects if x[1].get("subdomain")=="ballyhack-fall-classic-eno.pages.dev"]
+          if exact:
+              chosen=exact[0]
+          else:
+              preferred=[x for x in projects if x[1].get("name") in ("ballyhack-fall-classic-production","ballyhack-fall-classic-eno")]
+              if preferred:
+                  chosen=preferred[0]
+              else:
+                  fallback=[x for x in projects if "ballyhack-fall-classic" in str(x[1].get("name","")) and "beta" not in str(x[1].get("name","")).lower()]
+                  if len(fallback)!=1:
+                      raise RuntimeError("Could not uniquely identify Ballyhack production Pages project")
+                  chosen=fallback[0]
+
+          account_id,project=chosen
+          host=project.get("subdomain") or (project["name"]+".pages.dev")
+          with open(os.environ["GITHUB_ENV"],"a") as f:
+              f.write(f"CLOUDFLARE_ACCOUNT_ID={account_id}\n")
+              f.write(f"CF_PROJECT={project['name']}\n")
+              f.write(f"CF_HOST={host}\n")
+          print("Selected production project:",project["name"],"host:",host)
+          PY
+
+      - name: Deploy current main directly to Cloudflare Pages
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy . --project-name "$CF_PROJECT" --branch main
+
+      - name: Verify live production hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://$CF_HOST"
+          ok=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            HTML="$(curl -fsSL --no-cache "$BASE/?verify=$GITHUB_SHA" || true)"
+            APP="$(curl -fsSL --no-cache "$BASE/app.js?v=beta122&verify=$GITHUB_SHA" || true)"
+            GROSS="$(curl -fsSL --no-cache "$BASE/gross-scores-page.js?v=beta104&verify=$GITHUB_SHA" || true)"
+            GROUP="$(curl -fsSL --no-cache "$BASE/forty-ball-group-control.js?v=beta37&verify=$GITHUB_SHA" || true)"
+            if echo "$HTML" | grep -q 'gross-scores-page.js?v=beta104' \
+              && echo "$APP" | grep -q 'function active40Privacy' \
+              && echo "$APP" | grep -A2 'function active40Privacy' | grep -q 'return null' \
+              && echo "$GROSS" | grep -q 'function canViewGross(){ return true; }' \
+              && echo "$GROUP" | grep -q 'opt.disabled=false'; then
+              ok=1
+              break
+            fi
+            echo "Production has not converged yet; retry $attempt"
+            sleep 5
+          done
+          if [ "$ok" != "1" ]; then
+            echo "Live production verification failed for $BASE"
+            exit 1
+          fi
+          echo "Verified live production at $BASE"
