@@ -3,19 +3,7 @@
   const TAB='Gross Scores';
 
   function gross(r,n,h){ return +(state.scores?.[r]?.[n]?.[h]||0); }
-  function commissioner(){ return currentUser()==='David Glenn'&&typeof authToken==='function'&&!!authToken(); }
-  function ownGroup(r){
-    if(roundGroupNames(r,1).includes(currentUser()))return 1;
-    if(roundGroupNames(r,2).includes(currentUser()))return 2;
-    return null;
-  }
-  function canViewGross(r,n){
-    if(commissioner())return true;
-    if((state.sideGames?.[r]||'None')!=='40 Ball')return true;
-    if(typeof roundFullyEntered==='function'&&roundFullyEntered(r))return true;
-    const g=ownGroup(r);
-    return !!g&&roundGroupNames(r,g).includes(n);
-  }
+  function canViewGross(){ return true; }
   function valsFor(r,n){ return [...Array(18)].map((_,i)=>gross(r,n,i+1)); }
   function sum(vals){ return vals.reduce((a,b)=>a+(+b||0),0); }
   function roundGross(r,n){

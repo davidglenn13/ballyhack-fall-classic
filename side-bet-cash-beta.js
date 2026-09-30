@@ -85,7 +85,10 @@
     const net=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
     for(let r=1;r<=4;r++){
       for(let g=1;g<=2;g++){
-        Object.entries(nassauGroupNet(r,g)).forEach(([n,v])=>net[n]+=Number(v||0));
+        const nassauNet=typeof window.nassauCashNetForGroup==='function'
+          ?window.nassauCashNetForGroup(r,g)
+          :nassauGroupNet(r,g);
+        Object.entries(nassauNet||{}).forEach(([n,v])=>net[n]+=Number(v||0));
       }
       Object.entries(fortyNet(r).net).forEach(([n,v])=>net[n]+=Number(v||0));
     }
@@ -110,6 +113,8 @@
       if(fortyAmount){
         lines.push({
           round:r,
+          sortHole:19,
+          sortKind:9,
           type:'40 Ball',
           detail:'Round '+r+' result',
           amount:fortyAmount
@@ -139,6 +144,8 @@
           const amount=outcomeAmountForPlayer(name,outcome,cfg.value);
           if(amount)lines.push({
             round:r,
+            sortHole:Math.min(...seg.holes),
+            sortKind:0,
             type:'Nassau',
             detail:seg.label,
             amount
@@ -152,6 +159,8 @@
           const amount=outcomeAmountForPlayer(name,outcome,p.amount);
           if(amount)lines.push({
             round:r,
+            sortHole:+p.fromHole||Math.min(...seg.holes),
+            sortKind:p.parentPressId?2:1,
             type:p.parentPressId?'Press the Press':'Nassau Press',
             detail:seg.label+' · starts Hole '+p.fromHole,
             amount
@@ -159,7 +168,11 @@
         });
       }
     }
-    return lines;
+    return lines.sort((a,b)=>
+      (a.round-b.round)||
+      ((a.sortHole??99)-(b.sortHole??99))||
+      ((a.sortKind??0)-(b.sortKind??0))
+    );
   }
 
   function signedMoney(v){
