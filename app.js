@@ -2058,6 +2058,7 @@ setInterval(async()=>{
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker
-    .register('sw.js')
+    .register('sw.js?v=prod-cache-reset-20260930-1',{updateViaCache:'none'})
+    .then(reg=>reg.update())
     .catch(()=>{});
 }
