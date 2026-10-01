@@ -89,7 +89,7 @@ async function snapshot(db){
     db.prepare('SELECT player,amount FROM tournament_charges').all(),
     db.prepare('SELECT round_no,group_no,locked_by,locked_at FROM tournament_group_locks').all()
   ]);
-  const out={backupVersion:2,scores:{},setup:{},access:{},photos:{},sideGames:{1:'None',2:'None',3:'None',4:'None'},fortyBallSelections:{},fortyBallBets:{},nassauGroups:{},nassauBets:{},unlockRequests:{},charges:{},locks:{},revisions:{},frozen:false,epoch:null};
+  const out={backupVersion:2,scores:{},setup:{},access:{},photos:{},sideGames:{1:'None',2:'None',3:'None',4:'None'},fortyBallSelections:{},fortyBallBets:{},fortyBallOfficialResults:{},nassauGroups:{},nassauBets:{},unlockRequests:{},charges:{},locks:{},revisions:{},frozen:false,epoch:null};
   for(const s of scores.results){
     out.scores[s.round_no]??={};out.scores[s.round_no][s.player]??={};out.scores[s.round_no][s.player][s.hole]=String(s.gross);
   }
@@ -103,6 +103,7 @@ async function snapshot(db){
     if(s.key==='sideGames')out.sideGames=value||out.sideGames;
     if(s.key==='fortyBallSelections')out.fortyBallSelections=value||{};
     if(s.key==='fortyBallBets')out.fortyBallBets=value||{};
+    if(s.key==='fortyBallOfficialResults')out.fortyBallOfficialResults=value||{};
     if(s.key==='nassauGroups')out.nassauGroups=value||{};
     if(s.key==='nassauBets')out.nassauBets=value||{};
     if(s.key==='unlockRequests')out.unlockRequests=value||{};
