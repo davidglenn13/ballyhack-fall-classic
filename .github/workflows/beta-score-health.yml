@@ -1,0 +1,27 @@
+name: Beta Score Health
+
+on:
+  push:
+    branches: [beta]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check beta D1 score counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://ballyhack-fall-classic.pages.dev/api/score-health"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            BODY="$(curl -fsSL -H "Cache-Control: no-cache" "$URL?attempt=$attempt" || true)"
+            if echo "$BODY" | grep -q '"ok":true'; then
+              echo "BETA_SCORE_HEALTH=$BODY"
+              exit 0
+            fi
+            echo "Beta health endpoint not ready yet (attempt $attempt)"
+            sleep 6
+          done
+          exit 1
