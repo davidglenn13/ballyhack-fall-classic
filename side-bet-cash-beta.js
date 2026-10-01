@@ -10,6 +10,33 @@
   const wager=r=>Math.max(0,Number(state.fortyBallBets?.[r]??state.fortyBallBets?.[String(r)]??0));
   const fortyActive=r=>(state.sideGames?.[r]??state.sideGames?.[String(r)]??'None')==='40 Ball';
 
+  // One-off commissioner-entered side game that was played outside the planned formats.
+  // Each amount is the player's net result for the Scramble, so the adjustment sums to zero.
+  const MANUAL_LEDGER_ADJUSTMENTS=[{
+    type:'Scramble',
+    detail:'Manual side game result',
+    amounts:{
+      'David Glenn':250,
+      'Joe Phelan':250,
+      'Tyler Bohannon':250,
+      'Scott Karl':250,
+      'Nick Condeni':-250,
+      'Jason Wain':-250,
+      'Will Long':-250,
+      'Bill McCombs':-250
+    }
+  }];
+
+  function manualSideNet(){
+    const net=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
+    MANUAL_LEDGER_ADJUSTMENTS.forEach(entry=>{
+      Object.entries(entry.amounts||{}).forEach(([name,amount])=>{
+        if(Object.prototype.hasOwnProperty.call(net,name))net[name]+=Number(amount||0);
+      });
+    });
+    return net;
+  }
+
   function fortySummary(r,g){
     const names=roundGroupNames(r,g);
     const map=state.fortyBallSelections?.[r]?.[g]||state.fortyBallSelections?.[String(r)]?.[String(g)]||{};
@@ -94,6 +121,7 @@
       }
       Object.entries(fortyNet(r).net).forEach(([n,v])=>net[n]+=Number(v||0));
     }
+    Object.entries(manualSideNet()).forEach(([n,v])=>net[n]+=Number(v||0));
     return net;
   }
 
@@ -170,8 +198,20 @@
         });
       }
     }
+    MANUAL_LEDGER_ADJUSTMENTS.forEach(entry=>{
+      const amount=Number(entry.amounts?.[name]||0);
+      if(amount)lines.push({
+        round:null,
+        sortRound:5,
+        sortHole:99,
+        sortKind:99,
+        type:entry.type,
+        detail:entry.detail,
+        amount
+      });
+    });
     return lines.sort((a,b)=>
-      (a.round-b.round)||
+      ((a.sortRound??a.round??99)-(b.sortRound??b.round??99))||
       ((a.sortHole??99)-(b.sortHole??99))||
       ((a.sortKind??0)-(b.sortKind??0))
     );
@@ -195,7 +235,7 @@
       <div class="sbc-chit-row">
         <div>
           <b>${line.type}</b>
-          <span>Round ${line.round} · ${line.detail}</span>
+          <span>${line.round?('Round '+line.round+' · '):''}${line.detail}</span>
         </div>
         <strong class="${line.amount>0?'win':'loss'}">${signedMoney(line.amount)}</strong>
       </div>`).join(''):`<p class="notice compact">No completed side-game results are contributing to this player's net yet.</p>`;
@@ -292,7 +332,7 @@
 
   function ledgerHtml(title='Cumulative Side Bets'){
     const net=totalSideNet(),pay=payments(net);
-    const any=Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
+    const any=MANUAL_LEDGER_ADJUSTMENTS.length>0||Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
     const wagerRounds=[1,2,3,4].filter(r=>{
       if(+state.fortyBallBets?.[r]>0)return true;
       return Object.values(state.nassauBets?.[r]||{}).some(x=>+x?.value||(x?.presses||[]).length);
