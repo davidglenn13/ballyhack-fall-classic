@@ -326,7 +326,7 @@ score=function(){
   const mayRequest=isLocked&&currentUser()!=='David Glenn'&&canEdit(round,group);
   let html=originalScore();
   const review='<section class="score-review '+(isLocked?'locked':'')+'">'+
-    '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Scorecard Locked':'Review & Confirm Foursome')+'</h3>'+
+    '<div><div class="eyebrow">SCORECARD CONTROL</div><h3>'+(isLocked?'Round Complete':'Review & Confirm Foursome')+'</h3>'+
     (!isLocked?'<p>'+(!progress.complete?progress.missing+' of 72 gross scores are still missing.':!fortyLock.complete?'40 Ball must reach 40/40 before this scorecard can be locked. '+fortyLock.count+'/40 are currently counted.':'All 72 gross scores are entered and 40 Ball is complete. Review the card before locking it.')+'</p>':(unlockRequest?'<p>Unlock requested by '+unlockRequest.requestedBy+'.</p>':''))+'</div>'+
     '<div class="review-actions">'+
     (!isLocked&&!progress.complete?'<button class="secondary" id="findMissingScore">Find Missing Score</button>':'')+
@@ -485,7 +485,7 @@ render=function(){
     document.querySelectorAll('[data-score-player]').forEach(input=>{
       input.disabled=disabled;
       input.min='1'; input.max='20';
-      input.title=locked(round,group)?'Scorecard locked':(!canEdit(round,group)?'Only this foursome or the commissioner may edit':'');
+      input.title=locked(round,group)?'Round complete — final scores are protected':(!canEdit(round,group)?'Only this foursome or the commissioner may edit':'');
     });
     if(disabled&&!locked(round,group)&&authToken()){
       document.querySelector('.scoring-card')?.insertAdjacentHTML('afterbegin','<div class="permission-note">Viewing only — switch to your assigned foursome to enter scores.</div>');
