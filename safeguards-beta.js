@@ -484,10 +484,10 @@ render=function(){
     const isLocked=locked(round,group);
     const viewOnly=!canEdit(round,group)||!authToken();
     document.querySelectorAll('[data-score-player]').forEach(input=>{
-      input.disabled=viewOnly;
-      input.readOnly=isLocked&&!viewOnly;
+      input.disabled=false;
+      input.readOnly=isLocked||viewOnly;
       input.min='1'; input.max='20';
-      input.title=isLocked?'Round complete — final scores are protected':(!canEdit(round,group)?'Only this foursome or the commissioner may edit':'');
+      input.title=isLocked?'Round complete — final scores are protected':(viewOnly?'Viewing only — switch to your assigned foursome to enter scores':'');
     });
     if(viewOnly&&!isLocked&&authToken()){
       document.querySelector('.scoring-card')?.insertAdjacentHTML('afterbegin','<div class="permission-note">Viewing only — switch to your assigned foursome to enter scores.</div>');
