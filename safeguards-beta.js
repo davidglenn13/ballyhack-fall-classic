@@ -481,13 +481,15 @@ render=function(){
       });
       groupSelect.setAttribute('aria-label','Scoring group. Your assigned group is editable; the other group is view only.');
     }
-    const disabled=locked(round,group)||!canEdit(round,group)||!authToken();
+    const isLocked=locked(round,group);
+    const viewOnly=!canEdit(round,group)||!authToken();
     document.querySelectorAll('[data-score-player]').forEach(input=>{
-      input.disabled=disabled;
+      input.disabled=viewOnly;
+      input.readOnly=isLocked&&!viewOnly;
       input.min='1'; input.max='20';
-      input.title=locked(round,group)?'Round complete — final scores are protected':(!canEdit(round,group)?'Only this foursome or the commissioner may edit':'');
+      input.title=isLocked?'Round complete — final scores are protected':(!canEdit(round,group)?'Only this foursome or the commissioner may edit':'');
     });
-    if(disabled&&!locked(round,group)&&authToken()){
+    if(viewOnly&&!isLocked&&authToken()){
       document.querySelector('.scoring-card')?.insertAdjacentHTML('afterbegin','<div class="permission-note">Viewing only — switch to your assigned foursome to enter scores.</div>');
     }
   }
