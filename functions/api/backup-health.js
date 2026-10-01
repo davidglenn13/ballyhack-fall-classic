@@ -5,13 +5,18 @@ function json(data,status=200){
   return Response.json(data,{status,headers:{'cache-control':'no-store'}});
 }
 
-function countRoundOne(snapshot,names){
+function roundOneScores(snapshot,names){
   let count=0;
   const perPlayer=snapshot?.scores?.['1']||snapshot?.scores?.[1]||{};
   for(const [name,holes] of Object.entries(perPlayer)){
     if(names.has(name))count+=Object.keys(holes||{}).filter(h=>Number(holes[h])>0).length;
   }
   return count;
+}
+function selectionCount(snapshot,group){
+  const selections=snapshot?.fortyBallSelections?.['1']?.[String(group)]||
+    snapshot?.fortyBallSelections?.[1]?.[group]||{};
+  return Object.values(selections).filter(Boolean).length;
 }
 
 export async function onRequestGet({env}){
@@ -29,7 +34,14 @@ export async function onRequestGet({env}){
         createdBy:row.created_by,
         createdAt:row.created_at,
         backupVersion:snapshot.backupVersion||null,
-        round1:{group1:countRoundOne(snapshot,GROUP1),group2:countRoundOne(snapshot,GROUP2)}
+        round1:{
+          group1:roundOneScores(snapshot,GROUP1),
+          group2:roundOneScores(snapshot,GROUP2),
+          sideGame:snapshot?.sideGames?.['1']||snapshot?.sideGames?.[1]||'None',
+          group1Selections:selectionCount(snapshot,1),
+          group2Selections:selectionCount(snapshot,2),
+          wager:Number(snapshot?.fortyBallBets?.['1']||snapshot?.fortyBallBets?.[1]||0)
+        }
       };
     });
     return json({ok:true,backups});
