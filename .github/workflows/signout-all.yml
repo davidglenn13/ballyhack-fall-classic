@@ -1,0 +1,27 @@
+name: Sign Out Ballyhack Users
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  signout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Invalidate all production login sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://ballyhack-fall-classic-eno.pages.dev/api/signout-all"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            BODY="$(curl -sS -X POST -H "Content-Type: application/json" -H "Cache-Control: no-cache" --data '{"confirm":"SIGN_OUT_ALL_20261001"}' "$URL?attempt=$attempt" || true)"
+            if echo "$BODY" | grep -q '"ok":true'; then
+              echo "SIGNOUT_RESULT=$BODY"
+              exit 0
+            fi
+            echo "Sign-out endpoint not ready yet (attempt $attempt)"
+            sleep 6
+          done
+          exit 1
