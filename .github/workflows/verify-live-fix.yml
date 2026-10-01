@@ -1,0 +1,33 @@
+name: Verify Live Ballyhack Fix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify live production build
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://ballyhack-fall-classic-eno.pages.dev"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            HTML="$(curl -fsSL -H "Cache-Control: no-cache" "$BASE/?t=$RANDOM$attempt")"
+            SCRIPT_URL="$(echo "$HTML" | grep -o 'safeguards-beta.js?v=beta[0-9]*' | tail -1)"
+            echo "Attempt $attempt: $SCRIPT_URL"
+            if [ "$SCRIPT_URL" = "safeguards-beta.js?v=beta94" ]; then
+              SCRIPT="$(curl -fsSL -H "Cache-Control: no-cache" "$BASE/$SCRIPT_URL&t=$RANDOM")"
+              echo "$SCRIPT" | grep -F "input.disabled=false;"
+              echo "$SCRIPT" | grep -F "input.readOnly=isLocked||viewOnly;"
+              echo "$SCRIPT" | grep -F "FORCE_SIGNOUT_VERSION='20261001-1'"
+              echo "$SCRIPT" | grep -F "response.status===401&&authToken()"
+              echo "LIVE_FIX_VERIFIED"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
