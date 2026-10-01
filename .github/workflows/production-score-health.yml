@@ -16,7 +16,7 @@ jobs:
           set -euo pipefail
           URL="https://ballyhack-fall-classic-eno.pages.dev/api/score-health"
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            BODY="$(curl -fsSL --no-cache "$URL?attempt=$attempt" || true)"
+            BODY="$(curl -fsSL -H "Cache-Control: no-cache" "$URL?attempt=$attempt" || true)"
             if echo "$BODY" | grep -q '"ok":true'; then
               echo "PRODUCTION_SCORE_HEALTH=$BODY"
               exit 0
