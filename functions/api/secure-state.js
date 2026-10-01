@@ -109,7 +109,11 @@ async function snapshot(db){
     if(s.key==='frozen')out.frozen=!!value;
   }
   for(const c of charges.results)out.charges[c.player]=Number(c.amount);
-  for(const lock of locks.results){out.locks[lock.round_no]??={};out.locks[lock.round_no][lock.group_no]={lockedBy:lock.locked_by,lockedAt:lock.locked_at}}
+  for(const lock of locks.results){
+    if(Number(lock.round_no)===1)continue;
+    out.locks[lock.round_no]??={};
+    out.locks[lock.round_no][lock.group_no]={lockedBy:lock.locked_by,lockedAt:lock.locked_at};
+  }
   return out;
 }
 
@@ -220,7 +224,10 @@ async function groupScores(db,round,group){
   for(const row of rows.results)if(names.includes(row.player)){scores[row.player]??={};scores[row.player][row.hole]=row.gross}
   return scores;
 }
-async function isLocked(db,round,group){return !!await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first()}
+async function isLocked(db,round,group){
+  if(Number(round)===1)return false;
+  return !!await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first();
+}
 async function baseOperation(db,body,actor){
   const op=body?.op;
   if(body.player&&!PLAYERS.has(body.player))return json({error:'Unknown player'},400);
@@ -409,7 +416,7 @@ async function handle(context){
     if(op==='score'){
       const round=Number(body.round),hole=Number(body.hole),target=String(body.player||''),group=groupFor(round,target);
       if(!group||(!inGroup(round,group,actor.player)&&actor.role!=='admin'))return json({error:'You can only score your own foursome'},403);
-      if(await db.prepare('SELECT 1 AS yes FROM tournament_group_locks WHERE round_no=? AND group_no=?').bind(round,group).first())return json({error:'This foursome scorecard is locked'},423);
+      if(await isLocked(db,round,group))return json({error:'This foursome scorecard is locked'},423);
       const mutation=String(body.mutationId||randomHex(12)).slice(0,100);if(await db.prepare('SELECT id FROM tournament_score_audit WHERE mutation_id=?').bind(mutation).first())return json({ok:true,duplicate:true});
       const before=await db.prepare('SELECT gross FROM tournament_scores WHERE round_no=? AND player=? AND hole=?').bind(round,target,hole).first();
       if(Number(body.expectedGross??0)!==Number(before?.gross??0))return json({error:'This score changed on another phone. Refresh and review before editing it.'},409);
