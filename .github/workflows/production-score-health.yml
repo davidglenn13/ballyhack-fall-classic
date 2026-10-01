@@ -1,0 +1,28 @@
+name: Production Score Health
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production D1 score counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://ballyhack-fall-classic-eno.pages.dev/api/score-health"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            BODY="$(curl -fsSL --no-cache "$URL?attempt=$attempt" || true)"
+            if echo "$BODY" | grep -q '"ok":true'; then
+              echo "PRODUCTION_SCORE_HEALTH=$BODY"
+              exit 0
+            fi
+            echo "Production health endpoint not ready yet (attempt $attempt)"
+            sleep 6
+          done
+          echo "Production score health check failed"
+          exit 1
