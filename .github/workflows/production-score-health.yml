@@ -10,23 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify recovered production and 40 Ball state
+      - name: Inspect production 40 Ball backup state
         shell: bash
         run: |
           set -euo pipefail
           PROD="https://ballyhack-fall-classic-eno.pages.dev"
-          BETA="https://ballyhack-fall-classic.pages.dev"
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             HEALTH="$(curl -fsSL -H "Cache-Control: no-cache" "$PROD/api/score-health?attempt=$attempt" || true)"
             FORTY="$(curl -fsSL -H "Cache-Control: no-cache" "$PROD/api/forty-health?attempt=$attempt" || true)"
-            SOURCE="$(curl -fsSL -H "Cache-Control: no-cache" "$BETA/api/export-round1-group1?attempt=$attempt" || true)"
-            if echo "$HEALTH" | grep -q '"ok":true' && echo "$FORTY" | grep -q '"ok":true' && echo "$SOURCE" | grep -q '"ok":true'; then
+            BACKUPS="$(curl -fsSL -H "Cache-Control: no-cache" "$PROD/api/backup-health?attempt=$attempt" || true)"
+            if echo "$HEALTH" | grep -q '"ok":true' && echo "$FORTY" | grep -q '"ok":true' && echo "$BACKUPS" | grep -q '"ok":true'; then
               echo "PRODUCTION_SCORE_HEALTH=$HEALTH"
               echo "PRODUCTION_40_BALL_HEALTH=$FORTY"
-              echo "BETA_GROUP1_SOURCE=$SOURCE"
+              echo "PRODUCTION_BACKUP_HEALTH=$BACKUPS"
               exit 0
             fi
-            echo "40 Ball diagnostics not ready yet (attempt $attempt)"
             sleep 6
           done
           exit 1
