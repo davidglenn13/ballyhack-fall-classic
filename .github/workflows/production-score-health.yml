@@ -10,19 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check production D1 score counts
+      - name: Check production D1 score counts and backups
         shell: bash
         run: |
           set -euo pipefail
-          URL="https://ballyhack-fall-classic-eno.pages.dev/api/score-health"
+          BASE="https://ballyhack-fall-classic-eno.pages.dev"
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            BODY="$(curl -fsSL -H "Cache-Control: no-cache" "$URL?attempt=$attempt" || true)"
-            if echo "$BODY" | grep -q '"ok":true'; then
-              echo "PRODUCTION_SCORE_HEALTH=$BODY"
+            HEALTH="$(curl -fsSL -H "Cache-Control: no-cache" "$BASE/api/score-health?attempt=$attempt" || true)"
+            BACKUPS="$(curl -fsSL -H "Cache-Control: no-cache" "$BASE/api/backup-health?attempt=$attempt" || true)"
+            if echo "$HEALTH" | grep -q '"ok":true' && echo "$BACKUPS" | grep -q '"ok":true'; then
+              echo "PRODUCTION_SCORE_HEALTH=$HEALTH"
+              echo "PRODUCTION_BACKUP_HEALTH=$BACKUPS"
               exit 0
             fi
-            echo "Production health endpoint not ready yet (attempt $attempt)"
+            echo "Production diagnostics not ready yet (attempt $attempt)"
             sleep 6
           done
-          echo "Production score health check failed"
+          echo "Production diagnostics failed"
           exit 1
