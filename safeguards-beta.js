@@ -5,6 +5,8 @@ const PLAYER_KEY='ballyhack-current-player';
 const REMEMBERED_TOKEN_KEY='ballyhack-remembered-token';
 const REMEMBERED_PLAYER_KEY='ballyhack-remembered-player';
 const QUEUE_KEY='ballyhack-sync-queue-v1';
+const FORCE_SIGNOUT_KEY='ballyhack-force-signout-version';
+const FORCE_SIGNOUT_VERSION='20261001-1';
 
 // Carry a previous browser-wide sign-in into this tab once, then stop sharing it.
 const legacyPlayer=localStorage.getItem(PLAYER_KEY);
@@ -32,6 +34,16 @@ function forgetRememberedToken(){
     localStorage.removeItem(REMEMBERED_TOKEN_KEY);
     localStorage.removeItem(REMEMBERED_PLAYER_KEY);
   }
+}
+function clearAuth(){
+  localStorage.removeItem(REMEMBERED_TOKEN_KEY);
+  localStorage.removeItem(REMEMBERED_PLAYER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(PLAYER_KEY);
+}
+if(localStorage.getItem(FORCE_SIGNOUT_KEY)!==FORCE_SIGNOUT_VERSION){
+  clearAuth();
+  localStorage.setItem(FORCE_SIGNOUT_KEY,FORCE_SIGNOUT_VERSION);
 }
 const entryUrl=new URL(location.href);
 if(entryUrl.searchParams.get('switchPlayer')==='1'){
@@ -175,7 +187,16 @@ loadShared=async()=>{
         'x-ballyhack-token':authToken()
       }
     });
-    if(!response.ok)throw new Error('API '+response.status);
+    if(!response.ok){
+      if(response.status===401&&authToken()){
+        clearAuth();
+        setQueue([]);
+        setSync('PIN sign-in required','bad');
+        location.reload();
+        return false;
+      }
+      throw new Error('API '+response.status);
+    }
     const remote=await response.json();
     if(remote?.safeguards?.authenticated===false&&authToken()){
       forgetRememberedToken();
@@ -559,6 +580,7 @@ identityGate=function(){
 window.addEventListener('online',flushQueue);
 window.addEventListener('offline',()=>setSync('Offline — new scores will be saved on this phone','pending'));
 setInterval(flushQueue,10000);
+setInterval(()=>{ if(authToken()&&navigator.onLine) loadShared(); },15000);
 setTimeout(()=>{
   render();
   identityGate();
