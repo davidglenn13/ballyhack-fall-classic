@@ -28,15 +28,17 @@
 
   function fortyNet(r){
     const net=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
-    const value=wager(r),a=fortySummary(r,1),b=fortySummary(r,2);
-    const complete=fortyActive(r)&&a.count===40&&b.count===40;
-    let winner=0;
-    if(complete&&a.rel!==b.rel)winner=a.rel<b.rel?1:2;
+    const official=state.fortyBallOfficialResults?.[r]??state.fortyBallOfficialResults?.[String(r)]??null;
+    const value=official?Number(official.wager||0):wager(r);
+    const a=fortySummary(r,1),b=fortySummary(r,2);
+    const complete=official?true:(fortyActive(r)&&a.count===40&&b.count===40);
+    let winner=official?Number(official.winnerGroup||0):0;
+    if(!official&&complete&&a.rel!==b.rel)winner=a.rel<b.rel?1:2;
     if(value&&winner){
       roundGroupNames(r,winner).forEach(n=>net[n]+=value);
       roundGroupNames(r,winner===1?2:1).forEach(n=>net[n]-=value);
     }
-    return {net,value,a,b,complete,winner};
+    return {net,value,a,b,complete,winner,official:!!official};
   }
   window.fortyBallCashNetForRound=r=>fortyNet(r).net;
 
