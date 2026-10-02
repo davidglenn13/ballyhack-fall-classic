@@ -1,6 +1,6 @@
 /* Live win-probability model for the Ballyhack Fall Classic Cup.
    Completed/entered Stableford points are fixed; unplayed golf is simulated.
-   Individual: best 3 of 4 rounds. Cottage Cup: best 3 of 4 golfers each round, all 4 rounds count. */
+   The Thursday replay is cancelled. Individual and Cottage Cup forecasts use Rounds 1, 2 and 4. */
 (() => {
   const SIMS = 15000;
   const BASE_PPH = 1.85;
@@ -57,7 +57,7 @@
 
   function forecastProfile(name){
     let pts=0,holes=0;
-    for(let r=1;r<=4;r++){
+    for(const r of [1,2,4]){
       const live=enteredHolePoints(r,name);
       pts+=live.pts;
       holes+=live.holes;
@@ -102,10 +102,10 @@
       PLAYERS.forEach(p=>{
         const profile=profiles[p.name];
         const expectedPph=Math.max(.65,Math.min(3.25,profile.mean+normal(rand)*profile.skillSd));
-        rounds[p.name]=[1,2,3,4].map(r=>simulateRound(r,p.name,rand,expectedPph));
+        rounds[p.name]=[1,2,4].map(r=>simulateRound(r,p.name,rand,expectedPph));
       });
 
-      const finalTotals=PLAYERS.map(p=>({name:p.name,total:[...rounds[p.name]].sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)}));
+      const finalTotals=PLAYERS.map(p=>({name:p.name,total:rounds[p.name].reduce((a,b)=>a+b,0)}));
       const best=Math.max(...finalTotals.map(x=>x.total));
       const winners=finalTotals.filter(x=>x.total===best);
       winners.forEach(x=>playerWins[x.name]+=1/winners.length);
@@ -115,7 +115,7 @@
 
       const cottageTotals={1:0,2:0};
       for(const c of [1,2]){
-        for(let r=0;r<4;r++){
+        for(let r=0;r<3;r++){
           const vals=PLAYERS.filter(p=>p.cottage===c).map(p=>rounds[p.name][r]).sort((a,b)=>b-a);
           cottageTotals[c]+=vals.slice(0,3).reduce((a,b)=>a+b,0);
         }
@@ -156,7 +156,7 @@
 
   function individualPanel(model){
     const ordered=[...PLAYERS].sort((a,b)=>model.players[b.name].win-model.players[a.name].win);
-    return `<div class="prob-panel" data-win-prob="individual"><div class="prob-list">${ordered.map((p,i)=>{const x=model.players[p.name];const rounds=[1,2,3,4].map(r=>roundPoints(r,p.name));return `<div class="prob-player"><div>${avatar(p.name)}</div><div class="prob-info"><div class="prob-name">${i+1}. ${p.name}</div><div class="prob-rounds">${rounds.map((v,ri)=>`<span class="prob-round">R${ri+1} ${v||'—'}</span>`).join('')}</div><div class="prob-proj">Projected best 3: ${x.projected.toFixed(1)} pts</div></div><div class="prob-right"><div class="prob-stat"><div class="prob-value">${pct(x.win)}</div><div class="prob-label">To win</div></div><div class="prob-stat"><div class="prob-value">${pct(x.place)}</div><div class="prob-label">In money</div></div></div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.place)}%"></div></div></div>`;}).join('')}</div></div>`;
+    return `<div class="prob-panel" data-win-prob="individual"><div class="prob-list">${ordered.map((p,i)=>{const x=model.players[p.name];const rounds=[1,2,4].map(r=>roundPoints(r,p.name));return `<div class="prob-player"><div>${avatar(p.name)}</div><div class="prob-info"><div class="prob-name">${i+1}. ${p.name}</div><div class="prob-rounds">${rounds.map((v,ri)=>`<span class="prob-round">R${[1,2,4][ri]} ${v||'—'}</span>`).join('')}</div><div class="prob-proj">Projected total: ${x.projected.toFixed(1)} pts</div></div><div class="prob-right"><div class="prob-stat"><div class="prob-value">${pct(x.win)}</div><div class="prob-label">To win</div></div><div class="prob-stat"><div class="prob-value">${pct(x.place)}</div><div class="prob-label">In money</div></div></div><div class="prob-bar"><div class="prob-fill" style="width:${Math.max(.5,x.place)}%"></div></div></div>`;}).join('')}</div></div>`;
   }
 
   function inject(){
