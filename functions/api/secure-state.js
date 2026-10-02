@@ -81,7 +81,7 @@ async function groupsFor(db,round){
   const ranked=PLAYER_ORDER.map((name,index)=>({
     name,index,total:points[name][1]+points[name][2],bestRound:Math.max(points[name][1],points[name][2])
   })).sort((a,b)=>b.total-a.total||b.bestRound-a.bestRound||a.index-b.index);
-  return {1:ranked.slice(0,4).map(x=>x.name),2:ranked.slice(4).map(x=>x.name)};
+  return {1:ranked.slice(4).map(x=>x.name),2:ranked.slice(0,4).map(x=>x.name)};
 }
 async function groupFor(db,round,player){
   const groups=await groupsFor(db,round);
