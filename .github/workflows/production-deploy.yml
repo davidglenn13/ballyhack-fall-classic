@@ -108,12 +108,14 @@ jobs:
             GROSS="$(curl -fsSL --no-cache "$BASE/gross-scores-page.js?verify=$GITHUB_SHA" || true)"
             SAFE="$(curl -fsSL --no-cache "$BASE/safeguards-beta.js?verify=$GITHUB_SHA" || true)"
             GROUP="$(curl -fsSL --no-cache "$BASE/forty-ball-group-control.js?v=beta37&verify=$GITHUB_SHA" || true)"
-            if echo "$HTML" | grep -Fq 'gross-scores-page.js?v=prod-scorecard-20261002-2' \
+            if echo "$HTML" | grep -Fq 'gross-scores-page.js?v=prod-scorecard-20261002-3' \
               && echo "$HTML" | grep -Fq 'safeguards-beta.js?v=prod-side-results-20261002-1' \
               && echo "$APP" | grep -q 'function active40Privacy' \
               && echo "$APP" | grep -A2 'function active40Privacy' | grep -q 'return null' \
               && echo "$GROSS" | grep -Fq 'function scoreMark(h,v)' \
               && echo "$GROSS" | grep -Fq 'gross-score-birdie' \
+              && echo "$GROSS" | grep -Fq 'function overallAnalyticsCard()' \
+              && echo "$GROSS" | grep -Fq 'const ANALYTICS_ROUNDS=[1,2,4]' \
               && echo "$SAFE" | grep -Fq "tab==='More'||tab==='Side Games'" \
               && echo "$SAFE" | grep -Fq '[data-view-side-results],[data-goto="Side Games"]' \
               && echo "$GROUP" | grep -q 'opt.disabled=false'; then
