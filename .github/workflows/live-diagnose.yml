@@ -31,3 +31,14 @@ jobs:
           echo "=== HTTPS headers ==="
           curl -vI --connect-timeout 10 --max-time 20 "$URL"
           echo "CURL_EXIT=$?"
+          echo "=== Homepage GET ==="
+          HTML="$(curl -fsSL --connect-timeout 10 --max-time 20 "$URL")"
+          echo "$HTML" | grep -o '<title>[^<]*</title>' | head -1
+          echo "$HTML" | grep -o 'app.js?v=[^"]*' | tail -1
+          echo "$HTML" | grep -o 'gross-scores-page.js?v=[^"]*' | tail -1
+          echo "$HTML" | grep -o 'safeguards-beta.js?v=[^"]*' | tail -1
+          echo "HTML_BYTES=$(printf %s "$HTML" | wc -c)"
+          echo "=== API reachability ==="
+          curl -sS -o /tmp/api.out -w 'API_HTTP=%{http_code}\n' --connect-timeout 10 --max-time 20 "$URL/api/secure-state"
+          head -c 300 /tmp/api.out || true
+          echo
