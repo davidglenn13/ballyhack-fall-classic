@@ -1,0 +1,33 @@
+name: Diagnose Ballyhack Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production DNS and HTTP
+        shell: bash
+        run: |
+          set +e
+          HOST="ballyhack-fall-classic-eno.pages.dev"
+          URL="https://$HOST/"
+          echo "=== DNS via getent ==="
+          getent ahosts "$HOST"
+          echo "GETENT_EXIT=$?"
+          echo "=== DNS via Python ==="
+          python3 - <<'PY'
+          import socket
+          host="ballyhack-fall-classic-eno.pages.dev"
+          try:
+              print(socket.getaddrinfo(host,443))
+          except Exception as e:
+              print("DNS_ERROR",repr(e))
+          PY
+          echo "=== HTTPS headers ==="
+          curl -vI --connect-timeout 10 --max-time 20 "$URL"
+          echo "CURL_EXIT=$?"
