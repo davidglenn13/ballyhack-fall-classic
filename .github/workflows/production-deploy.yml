@@ -105,12 +105,17 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             HTML="$(curl -fsSL --no-cache "$BASE/?verify=$GITHUB_SHA" || true)"
             APP="$(curl -fsSL --no-cache "$BASE/app.js?v=beta122&verify=$GITHUB_SHA" || true)"
-            GROSS="$(curl -fsSL --no-cache "$BASE/gross-scores-page.js?v=beta104&verify=$GITHUB_SHA" || true)"
+            GROSS="$(curl -fsSL --no-cache "$BASE/gross-scores-page.js?verify=$GITHUB_SHA" || true)"
+            SAFE="$(curl -fsSL --no-cache "$BASE/safeguards-beta.js?verify=$GITHUB_SHA" || true)"
             GROUP="$(curl -fsSL --no-cache "$BASE/forty-ball-group-control.js?v=beta37&verify=$GITHUB_SHA" || true)"
-            if echo "$HTML" | grep -q 'gross-scores-page.js?v=beta104' \
+            if echo "$HTML" | grep -Fq 'gross-scores-page.js?v=prod-scorecard-20261002-1' \
+              && echo "$HTML" | grep -Fq 'safeguards-beta.js?v=prod-side-results-20261002-1' \
               && echo "$APP" | grep -q 'function active40Privacy' \
               && echo "$APP" | grep -A2 'function active40Privacy' | grep -q 'return null' \
-              && echo "$GROSS" | grep -q 'function canViewGross(){ return true; }' \
+              && echo "$GROSS" | grep -Fq 'function scoreMark(h,v)' \
+              && echo "$GROSS" | grep -Fq 'gross-score-birdie' \
+              && echo "$SAFE" | grep -Fq "tab==='More'||tab==='Side Games'" \
+              && echo "$SAFE" | grep -Fq '[data-view-side-results],[data-goto="Side Games"]' \
               && echo "$GROUP" | grep -q 'opt.disabled=false'; then
               ok=1
               break
