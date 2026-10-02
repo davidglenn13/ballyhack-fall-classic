@@ -12,6 +12,17 @@
     return {vals,entered,total:sum(vals),out:sum(vals.slice(0,9)),inn:sum(vals.slice(9))};
   }
 
+  function scoreMark(h,v){
+    if(!v)return '<span class="gross-score-mark gross-score-empty">—</span>';
+    const diff=Number(v)-PAR[h-1];
+    let cls='par',label='Par';
+    if(diff<=-2){cls='eagle';label='Eagle or better';}
+    else if(diff===-1){cls='birdie';label='Birdie';}
+    else if(diff===1){cls='bogey';label='Bogey';}
+    else if(diff>=2){cls='double-bogey';label='Double bogey or worse';}
+    return `<span class="gross-score-mark gross-score-${cls}" title="${label}" aria-label="${v}, ${label}">${v}</span>`;
+  }
+
   function roundCell(r,n){
     if(!canViewGross(r,n))return '<span class="gross-private">Private</span>';
     const x=roundGross(r,n);
@@ -53,8 +64,15 @@
           <div class="gross-detail-scroll">
             <table class="gross-detail-table">
               <thead><tr><th>Hole</th>${holes.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>${holes.slice(9).map(h=>`<th>${h}</th>`).join('')}<th>IN</th><th>TOTAL</th></tr></thead>
-              <tbody><tr><th>Gross</th>${x.vals.slice(0,9).map(v=>`<td>${v||'—'}</td>`).join('')}<td class="gross-detail-sub">${x.out||'—'}</td>${x.vals.slice(9).map(v=>`<td>${v||'—'}</td>`).join('')}<td class="gross-detail-sub">${x.inn||'—'}</td><td class="gross-detail-grand">${x.entered?x.total:'—'}</td></tr></tbody>
+              <tbody><tr><th>Gross</th>${x.vals.slice(0,9).map((v,i)=>`<td>${scoreMark(i+1,v)}</td>`).join('')}<td class="gross-detail-sub">${x.out||'—'}</td>${x.vals.slice(9).map((v,i)=>`<td>${scoreMark(i+10,v)}</td>`).join('')}<td class="gross-detail-sub">${x.inn||'—'}</td><td class="gross-detail-grand">${x.entered?x.total:'—'}</td></tr></tbody>
             </table>
+          </div>
+          <div class="gross-score-legend" aria-label="Gross scorecard notation">
+            <span><i class="gross-score-mark gross-score-eagle">−2</i> Eagle+</span>
+            <span><i class="gross-score-mark gross-score-birdie">−1</i> Birdie</span>
+            <span><i class="gross-score-mark gross-score-par">E</i> Par</span>
+            <span><i class="gross-score-mark gross-score-bogey">+1</i> Bogey</span>
+            <span><i class="gross-score-mark gross-score-double-bogey">+2</i> Double+</span>
           </div>
           <div class="gross-nine-summary"><span>Front 9 <b>${x.out||'—'}</b></span><span>Back 9 <b>${x.inn||'—'}</b></span><span>Total <b>${x.entered?x.total:'—'}</b></span></div>
         </section>
@@ -153,6 +171,8 @@
     .gross-close{border:0;background:#eef2f6;color:var(--navy);width:44px;height:44px;min-width:44px;border-radius:50%;font-size:28px;line-height:1;cursor:pointer;touch-action:manipulation;position:relative;z-index:2}
     .gross-detail-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:16px;border:1px solid var(--line);border-radius:12px}
     .gross-detail-table{border-collapse:collapse;min-width:980px;width:100%;font-size:12px}.gross-detail-table th,.gross-detail-table td{padding:9px 7px;text-align:center;border-right:1px solid var(--line);white-space:nowrap}.gross-detail-table thead th{background:#f4f7fa;color:var(--navy);font-weight:900}.gross-detail-table tbody th{text-align:left;background:#fff;color:var(--navy);font-weight:900}.gross-detail-sub{font-weight:900;background:#f8fafc}.gross-detail-grand{font-weight:900;background:rgba(23,54,93,.10);font-size:14px}
+    .gross-score-mark{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;box-sizing:border-box;margin:auto;font-weight:900;line-height:1;color:var(--navy);font-style:normal}.gross-score-birdie{border:2px solid #26734d;border-radius:50%;color:#1f6845}.gross-score-eagle{border:4px double #26734d;border-radius:50%;color:#1f6845}.gross-score-bogey{border:2px solid #a1251b;border-radius:2px;color:#912016}.gross-score-double-bogey{border:4px double #a1251b;border-radius:2px;color:#912016}.gross-score-empty{color:var(--muted)}
+    .gross-score-legend{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}.gross-score-legend>span{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--muted)}.gross-score-legend .gross-score-mark{width:23px;height:23px;font-size:10px}
     .gross-nine-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.gross-nine-summary span{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;font-size:12px}.gross-nine-summary b{display:block;font-size:19px;color:var(--navy);margin-top:2px}
     @media(max-width:760px){.gross-page-card{padding-left:12px;padding-right:12px}.gross-summary-table{width:max-content;min-width:100%}.gross-summary-table th,.gross-summary-table td{padding:9px 5px}.gross-summary-table th:first-child,.gross-summary-table td:first-child{padding-right:3px}.gross-summary-player{gap:6px}.gross-summary-player .player-avatar{width:34px;height:34px;min-width:34px}.gross-summary-player span{font-size:12px}.gross-round-score{min-width:48px;font-size:16px;padding:9px 6px}.gross-detail-backdrop{padding:8px}.gross-detail-card{padding:14px;max-height:92vh}.gross-nine-summary{grid-template-columns:1fr 1fr 1fr}}
   `;
