@@ -454,8 +454,13 @@ bind=function(){
 render=function(){
   const nav=document.querySelector('#nav');
   const commissioner=currentUser()==='David Glenn'&&!!authToken();
-  if(!commissioner&&tab==='More')tab='Score';
+  if(!commissioner&&(tab==='More'||tab==='Side Games'))tab='Score';
   originalRender();
+  const sideGamesTab=nav?.querySelector('button[data-tab="Side Games"]');
+  if(!commissioner){
+    sideGamesTab?.remove();
+    document.querySelectorAll('[data-view-side-results],[data-goto="Side Games"]').forEach(button=>button.remove());
+  }
   let commissionerTab=nav?.querySelector('button[data-tab="More"]');
   if(commissioner){
     if(!commissionerTab){
