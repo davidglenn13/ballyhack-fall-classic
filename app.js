@@ -6,9 +6,11 @@ const SI=[3,11,15,1,5,13,17,9,7,12,14,4,16,6,10,2,18,8];
 const ROUNDS=[
 {name:'Round 1 · Wed',time:'1:00 / 1:15 PM',first:['David Glenn','Nick Condeni','Bill McCombs','Will Long'],second:['Jason Wain','Joe Phelan','Tyler Bohannon','Scott Karl'],caddie:'Both groups'},
 {name:'Round 2 · Thu AM',time:'9:10 / 9:20 AM',first:['Tyler Bohannon','Scott Karl','Bill McCombs','Will Long'],second:['David Glenn','Nick Condeni','Jason Wain','Joe Phelan'],caddie:'First group'},
-{name:'Round 3 · Thu Replay',time:'After lunch · Variable',first:['Jason Wain','Joe Phelan','Bill McCombs','Will Long'],second:['David Glenn','Nick Condeni','Tyler Bohannon','Scott Karl'],caddie:'None — replay round'},
+{name:'Round 3 · Thu Replay · CANCELLED',time:'Cancelled',first:['Jason Wain','Joe Phelan','Bill McCombs','Will Long'],second:['David Glenn','Nick Condeni','Tyler Bohannon','Scott Karl'],caddie:'Cancelled'},
 {name:'Round 4 · Fri',time:'9:00 / 9:10 AM',first:['Nick Condeni','Joe Phelan','Scott Karl','Will Long'],second:['David Glenn','Jason Wain','Tyler Bohannon','Bill McCombs'],caddie:'First group'}
 ];
+const COUNTING_ROUNDS=[1,2,4];
+const CANCELLED_ROUNDS=new Set([3]);
 const key='ballyhack-fall-classic-2026-v2';
 const API='/api/secure-state';
 const INDEXES_FROZEN=true;
@@ -149,17 +151,16 @@ function formatToPar(value){
 }
 
 function totals(n){
-  let rs=[1,2,3,4].map(r=>roundPoints(r,n));
-  let played=rs.filter(
-    (x,i)=>Object.keys(state.scores[i+1]?.[n]||{}).length>0
-  );
-  let sorted=[...played].sort((a,b)=>b-a);
+  const rs=[1,2,3,4].map(r=>roundPoints(r,n));
+  const played=COUNTING_ROUNDS
+    .filter(r=>Object.keys(state.scores[r]?.[n]||{}).length>0)
+    .map(r=>rs[r-1]);
 
   return {
     rounds:rs,
     played,
-    best3:sorted.slice(0,3).reduce((a,b)=>a+b,0),
-    drop:played.length===4?Math.min(...played):null
+    best3:played.reduce((a,b)=>a+b,0),
+    drop:null
   }
 }
 
@@ -208,7 +209,7 @@ function defaultRoundForToday(){
   const day=easternDateKey();
 
   if(day<='2026-09-30')return 1;
-  if(day==='2026-10-01')return roundFullyEntered(2)?3:2;
+  if(day==='2026-10-01')return 2;
   return 4;
 }
 
@@ -290,12 +291,9 @@ function setDailyScoreRound(){
 
 function chaseTotal(x,n){
   if(n<=0)return 0;
-
-  const played=x.rounds.slice(0,n);
-
-  return n<4
-    ?played.reduce((a,b)=>a+b,0)
-    :[...played].sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)
+  return COUNTING_ROUNDS
+    .filter(r=>r<=n)
+    .reduce((sum,r)=>sum+(x.rounds[r-1]||0),0)
 }
 
 function ranksAfter(n){
@@ -334,7 +332,27 @@ function netScore(r,n,h){
   return gross-strokes(player(n).ch,SI[h-1])
 }
 
+function finalRoundGroups(){
+  const ready=[1,2].every(r=>PLAYERS.every(p=>
+    PAR.every((_,i)=>+(state.scores?.[r]?.[p.name]?.[i+1]||0)>0)
+  ));
+  if(!ready)return {1:ROUNDS[3].first,2:ROUNDS[3].second};
+
+  const ranked=PLAYERS
+    .map((p,index)=>{
+      const r1=roundPoints(1,p.name),r2=roundPoints(2,p.name);
+      return {name:p.name,index,total:r1+r2,bestRound:Math.max(r1,r2)};
+    })
+    .sort((a,b)=>b.total-a.total||b.bestRound-a.bestRound||a.index-b.index);
+
+  return {
+    1:ranked.slice(0,4).map(x=>x.name),
+    2:ranked.slice(4).map(x=>x.name)
+  };
+}
+
 function roundGroupNames(r,g){
+  if(r===4)return finalRoundGroups()[g]||[];
   const rd=ROUNDS[r-1];
   return g===1?rd.first:rd.second
 }
@@ -461,7 +479,7 @@ function sideGameResults(){
   const game=state.sideGames[r]||'None';
 
   const roundOpts=ROUNDS.map((x,i)=>
-    `<option value="${i+1}" ${r===i+1?'selected':''}>${x.name}</option>`
+    `<option value="${i+1}" ${r===i+1?'selected':''} ${CANCELLED_ROUNDS.has(i+1)?'disabled':''}>${x.name}</option>`
   ).join('');
 
   let body='';
@@ -649,9 +667,9 @@ function home(){
       </h2>
 
       <p>
-        Four championship rounds.
-        Best three Net Stableford totals count.
-        The lowest round is automatically dropped.
+        Three championship rounds count.
+        Thursday's replay round is cancelled.
+        Rounds 1, 2, and Friday's final round all count.
       </p>
 
       <div class="callout">
@@ -701,6 +719,10 @@ function home(){
 
 function score(){
   let r=+(sessionStorage.r||1);
+  if(CANCELLED_ROUNDS.has(r)){
+    r=defaultRoundForToday();
+    sessionStorage.r=String(r);
+  }
   let group=+(sessionStorage.group||1);
   let h=+(sessionStorage.hole||1);
   const holeLoopKey=`ballyhack-hole-loop-${r}-${group}`;
@@ -708,7 +730,7 @@ function score(){
   const holeLoopUnlocked=sessionStorage.getItem(holeLoopKey)==='1';
 
   const rd=ROUNDS[r-1];
-  const names=group===1?rd.first:rd.second;
+  const names=roundGroupNames(r,group);
 
   const par=PAR[h-1];
   const si=SI[h-1];
@@ -798,6 +820,7 @@ function score(){
               <option
                 value="${i+1}"
                 ${r===i+1?'selected':''}
+                ${CANCELLED_ROUNDS.has(i+1)?'disabled':''}
               >
                 ${x.name}
               </option>
@@ -994,7 +1017,7 @@ function board(){
         <br>
       </div>
 
-      ${privacy?`<div class="permission-note">40 Ball privacy is active. The other group’s current-round scoring, position, change, and Best 3 are hidden until the round is complete.</div>`:''}
+      ${privacy?`<div class="permission-note">40 Ball privacy is active. The other group’s current-round scoring, position, change, and Total are hidden until the round is complete.</div>`:''}
 
       <div class="table-wrap standings-table-wrap">
         <table class="standings-table">
@@ -1003,10 +1026,10 @@ function board(){
               <th>Pos</th>
               <th>Golfer</th>
               <th class="change-col" aria-label="Change" title="Change">▲▼</th>
-              <th>Best 3</th>
+              <th>Total</th>
               <th>R1</th>
               <th>R2</th>
-              <th>R3</th>
+              <th>R3 Cancelled</th>
               <th>R4</th>
             </tr>
           </thead>
@@ -1022,7 +1045,7 @@ function board(){
 
 function cottage(){
   const privacy=typeof active40Privacy==='function'?active40Privacy():null;
-  const rounds=[1,2,3,4];
+  const rounds=COUNTING_ROUNDS;
   let c1=rounds.map(r=>privacy&&r===privacy.round?null:cottageRound(1,r));
   let c2=rounds.map(r=>privacy&&r===privacy.round?null:cottageRound(2,r));
 
@@ -1051,12 +1074,12 @@ function cottage(){
       <div class="kpi">${t1}</div>
 
       <div class="muted">
-        ${privacy?'Through completed rounds':'Best 3 of 4 each round · All rounds count'}
+        ${privacy?'Through completed rounds':'Total of 4 each round · All rounds count'}
       </div>
 
       ${c1.map((x,i)=>`
         <div class="segment">
-          <b>R${i+1}</b>
+          <b>R${rounds[i]}</b>
           <span>${x===null?'Private':x+' pts'}</span>
         </div>
       `).join('')}
@@ -1076,12 +1099,12 @@ function cottage(){
       <div class="kpi">${t2}</div>
 
       <div class="muted">
-        ${privacy?'Through completed rounds':'Best 3 of 4 each round · All rounds count'}
+        ${privacy?'Through completed rounds':'Total of 4 each round · All rounds count'}
       </div>
 
       ${c2.map((x,i)=>`
         <div class="segment">
-          <b>R${i+1}</b>
+          <b>R${rounds[i]}</b>
           <span>${x===null?'Private':x+' pts'}</span>
         </div>
       `).join('')}
@@ -1107,18 +1130,13 @@ function chase(){
   }
 
   if(n===2){
-    stageTitle='Chase for the Cup — After Round 2';
-    stageCopy='Standings update with the two-round cumulative total, position in the race, and points behind the leader.';
-  }
-
-  if(n===3){
     stageTitle='Chase for the Cup — Final Round';
-    stageCopy='After Round 3, the dashboard adds the vulnerable round plus Friday targets and Path to the Podium for 1st, 2nd, and 3rd.';
+    stageCopy='The Thursday replay is cancelled. Rounds 1 and 2 are fixed, and Friday Round 4 completes the three-round championship total.';
   }
 
-  if(n===4){
+  if(n>=4){
     stageTitle='Chase for the Cup — Final Results';
-    stageCopy='Final standings use each golfer’s best three of four Stableford rounds. The lowest round is dropped automatically.';
+    stageCopy='Final standings are the sum of Rounds 1, 2, and 4. All three played championship rounds count.';
   }
 
   const podium=L.slice(0,3).map(x=>chaseTotal(x,n));
@@ -1126,128 +1144,60 @@ function chase(){
   const rows=L.map((x,i)=>{
     const current=chaseTotal(x,n);
     const behind=n?Math.max(0,leader-current):0;
-    const played=x.rounds.slice(0,n);
-    const vuln=n===3
-      ?Math.min(...played)
-      :(n===4?x.drop:null);
-
+    const played=COUNTING_ROUNDS.filter(r=>r<=n).map(r=>x.rounds[r-1]);
     let targets='<td>—</td><td>—</td><td>—</td>';
 
-    if(n===3){
-      const base=played.reduce((a,b)=>a+b,0)-Math.min(...played);
-
-      const need1=Math.max(0,(podium[0]||0)-base+1);
-      const need2=Math.max(0,(podium[1]||0)-base+1);
-      const need3=Math.max(0,(podium[2]||0)-base+1);
-
-      targets=`
-        <td>${need1||'—'}</td>
-        <td>${need2||'—'}</td>
-        <td>${need3||'—'}</td>
-      `;
+    if(n===2){
+      const need1=Math.max(0,(podium[0]||0)-current+1);
+      const need2=Math.max(0,(podium[1]||0)-current+1);
+      const need3=Math.max(0,(podium[2]||0)-current+1);
+      targets=`<td>${need1||'—'}</td><td>${need2||'—'}</td><td>${need3||'—'}</td>`;
     }
 
     const m=movementFor(x.p.name,n,i+1);
-
-    return `
-      <tr>
-        <td><span class="rank">${i+1}</span></td>
-
-        <td>
-          <div class="board-player">
-            ${avatar(x.p.name)}
-            <span>${x.p.name}</span>
-          </div>
-        </td>
-
-        <td><b>${m.label}</b></td>
-        <td>${played.length?played.join(' / '):'—'}</td>
-        <td><b>${current||'—'}</b></td>
-        <td>${behind||'—'}</td>
-        <td>${vuln??'—'}</td>
-
-        ${targets}
-      </tr>
-    `;
+    return `<tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td><div class="board-player">${avatar(x.p.name)}<span>${x.p.name}</span></div></td>
+      <td><b>${m.label}</b></td>
+      <td>${played.length?played.join(' / '):'—'}</td>
+      <td><b>${current||'—'}</b></td>
+      <td>${behind||'—'}</td>
+      <td>R3 cancelled</td>
+      ${targets}
+    </tr>`;
   }).join('');
 
-  return layout(`
-    <section class="card">
-
-      <h2 class="red">${stageTitle}</h2>
-
-      <p>${stageCopy}</p>
-
-      <div class="callout">
-        <b>Movement:</b>
-        ▲ shows places gained,
-        ▼ shows places lost,
-        and — means no change since the previous completed round.
-
-        <br>
-
-        <b>Progress cadence:</b>
-        Round 1 opening standings →
-        Round 2 cumulative race →
-        Round 3 final-round targets →
-        Round 4 official best-3 results.
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Pos</th>
-              <th>Golfer</th>
-              <th>Movement</th>
-              <th>Rounds</th>
-              <th>Chase Total</th>
-              <th>Behind</th>
-              <th>Vulnerable / Dropped</th>
-              <th>Need for 1st</th>
-              <th>Need for 2nd</th>
-              <th>Need for 3rd</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-
-    </section>
-  `);
+  return layout(`<section class="card">
+    <h2 class="red">${stageTitle}</h2>
+    <p>${stageCopy}</p>
+    <div class="callout"><b>Movement:</b> ▲ shows places gained, ▼ shows places lost, and — means no change since the previous completed championship round.<br><b>Progress cadence:</b> Round 1 opening standings → Round 2 final-round setup → Round 4 official three-round results.</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th>Pos</th><th>Golfer</th><th>Movement</th><th>Counting Rounds</th><th>Championship Total</th><th>Behind</th><th>Status</th><th>Need vs current 1st</th><th>Need vs current 2nd</th><th>Need vs current 3rd</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+  </section>`);
 }
-
 function trip(){
   return layout(`
     <section class="card">
       <h2>Pairings & Tee Times</h2>
 
-      ${ROUNDS.map((r,i)=>`
-        <h3>${r.name} · ${r.time}</h3>
-
-        <div class="pairing">
-
-          <div class="team">
-            <strong>First Group</strong>
-            <br>
-            ${r.first.join('<br>')}
+      ${ROUNDS.map((r,i)=>{
+        const round=i+1;
+        if(CANCELLED_ROUNDS.has(round))return `
+          <h3>${r.name}</h3>
+          <div class="callout"><b>Cancelled:</b> no scores from this replay round count toward the championship.</div>
+        `;
+        const first=roundGroupNames(round,1),second=roundGroupNames(round,2);
+        return `
+          <h3>${r.name} · ${r.time}</h3>
+          ${round===4?'<p class="notice"><b>Friday order:</b> higher four after R1 + R2 tee off first; lower four tee off last.</p>':''}
+          <div class="pairing">
+            <div class="team"><strong>First Group</strong><br>${first.join('<br>')}</div>
+            <div class="team"><strong>Second Group</strong><br>${second.join('<br>')}</div>
           </div>
-
-          <div class="team">
-            <strong>Second Group</strong>
-            <br>
-            ${r.second.join('<br>')}
-          </div>
-
-        </div>
-
-        <p class="muted">
-          Forecaddie: ${r.caddie}
-        </p>
-      `).join('')}
+          <p class="muted">Forecaddie: ${r.caddie}</p>
+        `;
+      }).join('')}
     </section>
 
     <section class="card half">
