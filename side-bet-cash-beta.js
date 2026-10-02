@@ -37,6 +37,80 @@
     return net;
   }
 
+
+  const CHAMPIONSHIP_ENTRY=200;
+  const STABLEFORD_PAYOUTS=[600,400,200];
+  const COTTAGE_PLAYER_PAYOUT=100;
+
+  function championshipRounds(){
+    return typeof COUNTING_ROUNDS!=='undefined'&&Array.isArray(COUNTING_ROUNDS)
+      ?COUNTING_ROUNDS
+      :[1,2,4];
+  }
+
+  function championshipComplete(){
+    const rounds=championshipRounds();
+    return rounds.length>0&&rounds.every(r=>
+      typeof roundFullyEntered==='function'&&roundFullyEntered(r)
+    );
+  }
+
+  function championshipSettlement(){
+    const net=Object.fromEntries(PLAYERS.map(p=>[p.name,0]));
+    const lines=Object.fromEntries(PLAYERS.map(p=>[p.name,[]]));
+    if(!championshipComplete())return {net,lines,complete:false,cottageWinner:0};
+
+    PLAYERS.forEach(p=>{
+      net[p.name]-=CHAMPIONSHIP_ENTRY;
+      lines[p.name].push({
+        round:null,
+        sortRound:6,
+        sortHole:99,
+        sortKind:0,
+        type:'Tournament Entry',
+        detail:'Ballyhack competition pool',
+        amount:-CHAMPIONSHIP_ENTRY
+      });
+    });
+
+    const standings=typeof leaderboard==='function'?leaderboard():[];
+    const places=['1st place','2nd place','3rd place'];
+    STABLEFORD_PAYOUTS.forEach((amount,i)=>{
+      const name=standings[i]?.p?.name;
+      if(!name||!Object.prototype.hasOwnProperty.call(net,name))return;
+      net[name]+=amount;
+      lines[name].push({
+        round:null,
+        sortRound:6,
+        sortHole:99,
+        sortKind:1+i,
+        type:'Stableford Championship',
+        detail:places[i],
+        amount
+      });
+    });
+
+    const c1=typeof cottageTotal==='function'?Number(cottageTotal(1)||0):0;
+    const c2=typeof cottageTotal==='function'?Number(cottageTotal(2)||0):0;
+    const cottageWinner=c1===c2?0:(c1>c2?1:2);
+    if(cottageWinner){
+      PLAYERS.filter(p=>p.cottage===cottageWinner).forEach(p=>{
+        net[p.name]+=COTTAGE_PLAYER_PAYOUT;
+        lines[p.name].push({
+          round:null,
+          sortRound:6,
+          sortHole:99,
+          sortKind:4,
+          type:'Cottage Cup',
+          detail:'Cottage '+cottageWinner+' champions',
+          amount:COTTAGE_PLAYER_PAYOUT
+        });
+      });
+    }
+
+    return {net,lines,complete:true,cottageWinner};
+  }
+
   function fortySummary(r,g){
     const names=roundGroupNames(r,g);
     const map=state.fortyBallSelections?.[r]?.[g]||state.fortyBallSelections?.[String(r)]?.[String(g)]||{};
@@ -122,6 +196,7 @@
       Object.entries(fortyNet(r).net).forEach(([n,v])=>net[n]+=Number(v||0));
     }
     Object.entries(manualSideNet()).forEach(([n,v])=>net[n]+=Number(v||0));
+    Object.entries(championshipSettlement().net).forEach(([n,v])=>net[n]+=Number(v||0));
     return net;
   }
 
@@ -210,6 +285,7 @@
         amount
       });
     });
+    (championshipSettlement().lines[name]||[]).forEach(line=>lines.push(line));
     return lines.sort((a,b)=>
       ((a.sortRound??a.round??99)-(b.sortRound??b.round??99))||
       ((a.sortHole??99)-(b.sortHole??99))||
@@ -251,7 +327,7 @@
           </div>
           <button type="button" class="sbc-chit-close" aria-label="Close player net detail">×</button>
         </div>
-        <p class="sbc-chit-intro">Completed wagers currently included in this player's Ledger total.</p>
+        <p class="sbc-chit-intro">Completed wagers and championship settlement items currently included in this player's Ledger total.</p>
         <div class="sbc-chit-lines">${rows}</div>
         <div class="sbc-chit-total">
           <span>Net Total</span>
@@ -330,19 +406,20 @@
     card.insertAdjacentHTML('beforeend',roundCashBlock(r));
   }
 
-  function ledgerHtml(title='Cumulative Side Bets'){
+  function ledgerHtml(title='Tournament Ledger'){
     const net=totalSideNet(),pay=payments(net);
-    const any=MANUAL_LEDGER_ADJUSTMENTS.length>0||Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
+    const championshipDone=championshipComplete();
+    const any=championshipDone||MANUAL_LEDGER_ADJUSTMENTS.length>0||Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
     const wagerRounds=[1,2,3,4].filter(r=>{
       if(+state.fortyBallBets?.[r]>0)return true;
       return Object.values(state.nassauBets?.[r]||{}).some(x=>+x?.value||(x?.presses||[]).length);
     });
-    const final=any&&wagerRounds.every(r=>typeof roundFullyEntered==='function'&&roundFullyEntered(r));
+    const final=any&&championshipDone&&wagerRounds.every(r=>typeof roundFullyEntered==='function'&&roundFullyEntered(r));
     const statusClass=final?'is-final':'is-live';
     const statusText=final?'COMPLETE':'LIVE';
     const summary=pay.length
       ?pay.map(x=>`<div class="sbc-final-pay"><div><b>${x.from}</b><span> pays </span><b>${x.to}</b></div><strong>${money(x.amount)}</strong></div>`).join('')
-      :`<p class="notice">${any?'No payment is due from completed side-game results yet.':'Completed results will populate here automatically.'}</p>`;
+      :`<p class="notice">${any?'No payment is due from completed tournament results yet.':'Completed results will populate here automatically.'}</p>`;
 
     return `<section class="card sbc-ledger">
       <div class="sbc-ledger-head">
@@ -359,14 +436,14 @@
             <div class="eyebrow">PAYMENTS</div>
             <h3>Who Pays Who</h3>
           </div>
-          <span>${final?'All wagered rounds complete':''}</span>
+          <span>${final?'All wagers and championship results complete':''}</span>
         </div>
         ${summary}
       </div>
 
       <div class="sbc-detail-head">
         <h3>Player Net Detail - Click for Chit</h3>
-        <p>Nassau base matches, presses, and 40 Ball wagers are netted across all completed results.</p>
+        <p>Nassau, presses, 40 Ball, Scramble, the $200 entry, Stableford prizes, and Cottage Cup prizes are netted across all completed results.</p>
       </div>
 
       <div class="sbc-net">${PLAYERS.map(p=>{
@@ -419,7 +496,7 @@
     app.querySelector('.nb-settlement')?.remove();
     if(app.querySelector('.sbc-settlement'))return;
     const trip=[...app.querySelectorAll('.card')].find(c=>c.querySelector('h2')?.textContent.trim()==='Trip Settlement');
-    if(trip)trip.insertAdjacentHTML('afterend',ledgerHtml('Side Bet Settlement').replace('class="card sbc-ledger"','class="card sbc-ledger sbc-settlement"'));
+    if(trip)trip.insertAdjacentHTML('afterend',ledgerHtml('Tournament Settlement').replace('class="card sbc-ledger"','class="card sbc-ledger sbc-settlement"'));
   }
 
   function enhance(){ensureLedgerNav();add40WagerToScore();enhance40Results();replaceTripSettlement();moveSelectedPicker();}
