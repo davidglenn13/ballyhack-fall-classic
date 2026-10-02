@@ -406,7 +406,7 @@
     card.insertAdjacentHTML('beforeend',roundCashBlock(r));
   }
 
-  function ledgerHtml(title='Tournament Ledger'){
+  function ledgerHtml(title='Cumulative Bets'){
     const net=totalSideNet(),pay=payments(net);
     const championshipDone=championshipComplete();
     const any=championshipDone||MANUAL_LEDGER_ADJUSTMENTS.length>0||Object.values(state.fortyBallBets||{}).some(v=>+v>0)||Object.values(state.nassauBets||{}).some(r=>Object.values(r||{}).some(x=>+x?.value||(x?.presses||[]).length));
