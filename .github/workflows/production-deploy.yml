@@ -108,7 +108,7 @@ jobs:
             GROSS="$(curl -fsSL --no-cache "$BASE/gross-scores-page.js?verify=$GITHUB_SHA" || true)"
             SAFE="$(curl -fsSL --no-cache "$BASE/safeguards-beta.js?verify=$GITHUB_SHA" || true)"
             GROUP="$(curl -fsSL --no-cache "$BASE/forty-ball-group-control.js?v=beta37&verify=$GITHUB_SHA" || true)"
-            if echo "$HTML" | grep -Fq 'gross-scores-page.js?v=prod-scorecard-20261002-1' \
+            if echo "$HTML" | grep -Fq 'gross-scores-page.js?v=prod-scorecard-20261002-2' \
               && echo "$HTML" | grep -Fq 'safeguards-beta.js?v=prod-side-results-20261002-1' \
               && echo "$APP" | grep -q 'function active40Privacy' \
               && echo "$APP" | grep -A2 'function active40Privacy' | grep -q 'return null' \
