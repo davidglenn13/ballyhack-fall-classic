@@ -346,8 +346,8 @@ function finalRoundGroups(){
     .sort((a,b)=>b.total-a.total||b.bestRound-a.bestRound||a.index-b.index);
 
   return {
-    1:ranked.slice(0,4).map(x=>x.name),
-    2:ranked.slice(4).map(x=>x.name)
+    1:ranked.slice(4).map(x=>x.name),
+    2:ranked.slice(0,4).map(x=>x.name)
   };
 }
 
@@ -1190,7 +1190,7 @@ function trip(){
         const first=roundGroupNames(round,1),second=roundGroupNames(round,2);
         return `
           <h3>${r.name} · ${r.time}</h3>
-          ${round===4?'<p class="notice"><b>Friday order:</b> higher four after R1 + R2 tee off first; lower four tee off last.</p>':''}
+          ${round===4?'<p class="notice"><b>Friday order:</b> lowest four in the overall standings after R1 + R2 tee off first; highest four tee off second.</p>':''}
           <div class="pairing">
             <div class="team"><strong>First Group</strong><br>${first.join('<br>')}</div>
             <div class="team"><strong>Second Group</strong><br>${second.join('<br>')}</div>
