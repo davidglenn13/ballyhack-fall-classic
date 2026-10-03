@@ -68,7 +68,7 @@
       btn.setAttribute('data-forty-hole',String(h));
       btn.setAttribute('aria-pressed',selected?'true':'false');
       btn.disabled=!input.value;
-      btn.textContent=selected?'✓ Counted':'Count in 40 Ball';
+      btn.textContent=selected?'Counted':'Count in 40 Ball';
       wrap.appendChild(btn);
       (input.closest('.score-player')||input.parentElement).appendChild(wrap);
     });
@@ -111,7 +111,7 @@
     map[k]=next;
     target.setAttribute('aria-pressed',next?'true':'false');
     target.classList.toggle('selected',next);
-    target.textContent=next?'✓ Counted':'Count in 40 Ball';
+    target.textContent=next?'Counted':'Count in 40 Ball';
 
     const note=document.querySelector('.forty-ball-beta-note');
     if(note){
