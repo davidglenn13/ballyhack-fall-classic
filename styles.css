@@ -21,7 +21,7 @@
   .hole-meta{font-size:13px}
   .hole-nav{min-height:52px;width:54px}
   .score-player{grid-template-columns:1fr 76px;gap:8px 10px;padding:12px 10px;min-height:100px}
-  .score-input{width:76px;height:62px;min-height:62px;padding:4px;font-size:28px;border:2px solid var(--navy);border-radius:10px}
+  .score-input{width:76px;height:62px;min-height:62px;padding:4px;font-size:36px;border:2px solid var(--navy);border-radius:10px}
   .score-input:focus{outline:3px solid rgba(215,25,32,.28);outline-offset:2px;border-color:var(--red)}
   .score-player-name b{font-size:15px}
   .score-result{font-size:14px}
