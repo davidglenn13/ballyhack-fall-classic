@@ -179,13 +179,15 @@
       .forty-tracker-stats strong{font-size:20px}
       .forty-tracker-stats span{text-align:left;font-size:10px}
       .forty-ball-select{
-        font-size:12px;
-        line-height:1.15;
+        font-size:15px;
+        font-weight:900;
+        line-height:1.08;
         padding:7px 5px;
         min-height:54px;
       }
       .forty-ball-select.selected{
-        font-size:10px;
+        font-size:13px;
+        font-weight:900;
         white-space:nowrap;
         letter-spacing:-.01em;
         padding-left:3px;
