@@ -717,9 +717,9 @@ function score(){
     ||'';
   const fortyReady=!fortyEnabled||Number(state.fortyBallBets?.[r]||0)>0;
   const nassauReady=!nassauFormat||Number(state.nassauBets?.[r]?.[group]?.value||0)>0;
-  // Side games are optional. Only hold the setup panel above scoring when an
-  // enabled game still needs its wager; neither game selected is fully ready.
-  const gameReady=fortyReady&&nassauReady;
+  // Side games are optional, but keep their setup panel above scoring until a
+  // game is chosen and every chosen game's wager has been entered.
+  const gameReady=(fortyEnabled||!!nassauFormat)&&fortyReady&&nassauReady;
 
   const playerRows=names.map(n=>{
     const p=player(n);
