@@ -74,6 +74,31 @@ test('One-hole matches reject presses and a counter-press needs a recorded paren
   assert.match(validateWagerChange({...base,next:{value:10,presses:[{id:'orphan',segment:0,fromHole:2,pressedBy:'b',amount:10,parentPressId:'missing'}]}}),/opposing press/);
 });
 
+test('40 Ball and Nassau can run together without either game being forced',async()=>{
+  const x=session();await x.login('David Glenn');
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:2,value:'40 Ball'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'nassauGroup',round:2,group:1,value:'Nassau 6-6-6'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'fortyBallBet',round:2,value:25})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'nassauBetConfig',round:2,group:1,config:{value:10,presses:[]}})).status,200);
+  const state=await x.get('David Glenn');
+  assert.equal(state.sideGames[2],'40 Ball');
+  assert.equal(state.nassauGroups[2][1],'Nassau 6-6-6');
+  assert.equal(state.fortyBallBets[2],25);
+  assert.equal(state.nassauBets[2][1].value,10);
+  assert.equal(state.nassauGroups[2][2],undefined);
+});
+
+test('Turning 40 Ball off preserves its recorded selections for review',async()=>{
+  const x=session();await x.login('David Glenn');
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:3,value:'40 Ball'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'score',round:3,player:GROUPS[3][1][0],hole:1,gross:5,expectedGross:0,mutationId:'keep-pick-score'})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'fortyBallSelection',round:3,group:1,player:GROUPS[3][1][0],hole:1,value:true})).status,200);
+  assert.equal((await x.post('David Glenn',{op:'sideGame',round:3,value:'None'})).status,200);
+  const state=await x.get('David Glenn');
+  assert.equal(state.sideGames[3],'None');
+  assert.equal(state.fortyBallSelections[3][1][`${GROUPS[3][1][0]}|1`],true);
+});
+
 test('A stale phone cannot overwrite settings or an edited score',async()=>{
   const x=session();await x.login('David Glenn');await x.login('Nick Condeni');
   const first=await x.get('David Glenn');

@@ -37,6 +37,15 @@
   function segmentsFor(r,g){ return formatFor(r,g)===N66?SEG66:SEG55; }
   function hasNassau(r,g){ return !!formatFor(r,g); }
   function activeNassauGroups(r){ return [1,2].filter(g=>hasNassau(r,g)); }
+  function fortyActive(r){ return (state.sideGames?.[r]??state.sideGames?.[String(r)]??'None')===FORTY; }
+  function fallbackRoundGame(r,excludingGroup=0){
+    for(const g of [1,2]){
+      if(g===excludingGroup)continue;
+      const fmt=formatFor(r,g);
+      if(fmt)return fmt;
+    }
+    return 'None';
+  }
   function firstNames(r,g){ return roundGroupNames(r,g).map(n=>n.split(' ')[0]).join(' · '); }
   function money(v){
     const n=Math.max(0,Number(v||0));
@@ -59,13 +68,6 @@
     if(!await apiPost({op:'nassauGroup',round:r,group:g,value:value||false}))throw new Error('Nassau format was not saved');
   }
 
-  function displayGameForScore(r,g){
-    const roundGame=state.sideGames?.[r]||'None';
-    if(roundGame===FORTY)return FORTY;
-    if(roundGame==='None')return 'None';
-    return formatFor(r,g)||roundGame||'None';
-  }
-
   function clearFortyWager(r){
     state.fortyBallBets??={};
     state.fortyBallBets[r]=0;
@@ -76,13 +78,6 @@
       apiPost({op:'fortyBallBet',round:r,value:0}).catch?.(()=>{});
     });
   }
-  function clearFortySelectionsLocal(r){
-    state.fortyBallSelections??={};
-    delete state.fortyBallSelections[r];
-    delete state.fortyBallSelections[String(r)];
-    save();
-  }
-
   function clearNassauWager(r,g){
     state.nassauBets??={};
     state.nassauBets[r]??={};
@@ -96,84 +91,67 @@
     }).catch?.(()=>{});
   }
 
-  async function handleScoreGameChange(select){
-    const r=roundNo(), g=groupNo(), value=select.value;
-    const previous=displayGameForScore(r,g);
+  async function handleFortyChange(select){
+    const r=roundNo(), turningOn=select.value==='on', wasActive=fortyActive(r);
     try{
-      // The selected game is the authoritative action. Save that first so
-      // cleanup of old wagers/config cannot block or revert the selection.
-      await setRoundGame(r,value===N55||value===N66?value:value);
-
-      if(value===FORTY){
-        if(previous!==FORTY){
+      if(turningOn){
+        await setRoundGame(r,FORTY);
+        if(!wasActive){
           clearFortyWager(r);
-          if(previous==='None')clearFortySelectionsLocal(r);
           sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
           sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
         }
-        // 40 Ball replaces any Nassau setup for the round; clear in background.
-        Promise.allSettled([setNassauGroup(r,1,false),setNassauGroup(r,2,false)]);
-      }else if(value===N55||value===N66){
-        if(previous!==value){
-          clearNassauWager(r,g);
-          sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+g);
-        }
-        setNassauGroup(r,g,value).catch(()=>{});
-      }else{
-        // None is a hard reset. UI switches to None immediately and all old
-        // wager/config data is cleared without being allowed to block it.
+      }else if(wasActive){
+        await setRoundGame(r,formatFor(r,groupNo())||fallbackRoundGame(r)||'None');
         clearFortyWager(r);
-        clearFortySelectionsLocal(r);
-        clearNassauWager(r,1);
-        clearNassauWager(r,2);
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
         sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
-        Promise.allSettled([setNassauGroup(r,1,false),setNassauGroup(r,2,false)]);
       }
       render();
     }catch(error){
       await loadShared();
       render();
-      alert('That side-game change was not saved. Review the current choices and try again.');
+      alert('That 40 Ball change was not saved. Review the current choice and try again.');
     }
   }
 
-  function ensurePickerOptions(sel){
-    [...sel.options].forEach(o=>{ if(!o.value)o.value=o.textContent.trim(); });
-    const legacy=[...sel.options].find(o=>o.value===LEGACY_N55||o.textContent.trim()===LEGACY_N55);
-    if(legacy){ legacy.value=N55; legacy.textContent=N55; }
-    if(!sel.querySelector(`option[value="${N55}"]`)){
-      const o=document.createElement('option');o.value=N55;o.textContent=N55;sel.appendChild(o);
-    }
-    if(!sel.querySelector(`option[value="${N66}"]`)){
-      const o=document.createElement('option');o.value=N66;o.textContent=N66;sel.appendChild(o);
+  async function handleNassauChange(select){
+    const r=roundNo(),g=groupNo(),value=select.value||false,previous=formatFor(r,g);
+    try{
+      await setNassauGroup(r,g,value);
+      if(previous!==(value||null)){
+        clearNassauWager(r,g);
+        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+g);
+      }
+      if(!fortyActive(r))await setRoundGame(r,value||fallbackRoundGame(r,g)||'None');
+      render();
+    }catch(error){
+      await loadShared();
+      render();
+      alert('That Nassau change was not saved. Review the current choice and try again.');
     }
   }
 
   function syncScorePicker(){
-    const sel=document.querySelector('#scoreSideGame');
-    if(!sel)return;
-    ensurePickerOptions(sel);
+    const fortySel=document.querySelector('#scoreFortyBall');
+    const nassauSel=document.querySelector('#scoreNassau');
+    if(!fortySel||!nassauSel)return;
     const r=roundNo(),g=groupNo(),fmt=formatFor(r,g);
-    sel.value=displayGameForScore(r,g);
-    const eyebrow=sel.closest('.side-game-picker')?.querySelector('.eyebrow');
-    if(eyebrow) eyebrow.textContent=(state.sideGames?.[r]===FORTY)?'SIDE GAME FOR THIS ROUND':'SIDE GAME FOR THIS GROUP';
-    let note=sel.closest('.side-game-picker')?.querySelector('.nassau-group-note');
+    fortySel.value=fortyActive(r)?'on':'off';
+    nassauSel.value=fmt||'';
+    let note=nassauSel.closest('.side-game-control')?.querySelector('.nassau-group-note');
     if(!note){
       note=document.createElement('div');
       note.className='nassau-group-note';
-      sel.insertAdjacentElement('afterend',note);
+      nassauSel.closest('label')?.insertAdjacentElement('afterend',note);
     }
-    let pairings=sel.closest('.side-game-picker')?.querySelector('.nassau-pairing-note');
+    let pairings=nassauSel.closest('.side-game-control')?.querySelector('.nassau-pairing-note');
     if(!pairings){
       pairings=document.createElement('div');
       pairings.className='nassau-pairing-note';
       note.insertAdjacentElement('afterend',pairings);
     }
-    if(state.sideGames?.[r]===FORTY){
-      note.textContent='40 Ball applies to both groups for the round.';
-      pairings.textContent='';
-    }else if(state.sideGames?.[r]!=='None'&&fmt){
+    if(fmt){
       note.textContent=fmt===N55
         ?'Nassau 5-5-5-1-1-1 is active for this foursome.'
         :`${fmt} is active only for this foursome.`;
@@ -185,7 +163,7 @@
       if(fmt===N55)pairingRows.push('<span>Holes 16–18: Repeat the pairing order</span>');
       pairings.innerHTML='<b>Pairings</b>'+pairingRows.join('');
     }else{
-      note.textContent='Either Nassau format can be selected independently by each foursome.';
+      note.textContent='Nassau is off for this foursome.';
       pairings.textContent='';
     }
     if(typeof window.__ensureNassauWagerField==='function'){
@@ -248,7 +226,7 @@
       if(r===currentRound)continue;
       const game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
       if(game===FORTY) items+=fortyArchive(r);
-      else if(activeNassauGroups(r).length) items+=nassauArchive(r);
+      if(activeNassauGroups(r).length) items+=nassauArchive(r);
     }
     return `<section class="saved-side-results"><div class="eyebrow">SAVED RESULTS</div><h3>Previous Side Games</h3>${items||'<p class="notice">Completed side games from other rounds will remain here for reference.</p>'}</section>`;
   }
@@ -272,11 +250,22 @@
   function appendSavedResults(){
     const app=document.querySelector('#app'); if(!app)return;
     const r=sideRound();
-    if(activeNassauGroups(r).length)return;
+    const game=state.sideGames?.[r]||state.sideGames?.[String(r)]||'None';
+    if(game!==FORTY&&activeNassauGroups(r).length)return;
     const h=app.querySelector('h2')?.textContent||'';
     if(!/Side Game|40 Ball/.test(h) || app.querySelector('.saved-side-results'))return;
     const card=app.querySelector('.card');
     if(card) card.insertAdjacentHTML('beforeend',savedResults(r));
+  }
+
+  function appendCombinedNassauResults(){
+    const app=document.querySelector('#app');if(!app)return;
+    const r=sideRound(),groups=activeNassauGroups(r);
+    if(!fortyActive(r)||!groups.length||app.querySelector('.combined-nassau-results'))return;
+    const h=app.querySelector('h2')?.textContent||'';
+    if(!/40 Ball/.test(h))return;
+    const card=app.querySelector('.card');
+    if(card)card.insertAdjacentHTML('beforeend',`<section class="combined-nassau-results"><div class="eyebrow">RUNNING AT THE SAME TIME</div><h3>Nassau Games</h3>${groups.map(g=>nassauPanel(r,g)).join('')}</section>`);
   }
 
   function ensureStyle(){
@@ -287,15 +276,22 @@
       .saved-side-results h3{margin:3px 0 10px}
       .saved-side-entry{display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--line)}
       .saved-side-entry:first-of-type{border-top:0}.saved-side-entry span{font-size:12px;color:var(--muted)}
+      .side-game-control{display:grid;gap:5px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+      .side-game-control label{display:grid;gap:5px;font-size:12px;font-weight:800;color:var(--muted)}
+      .side-game-control-note{font-size:10px;color:var(--muted)}
+      .combined-nassau-results{margin-top:18px;padding-top:16px;border-top:2px solid var(--line)}
+      .combined-nassau-results>h3{margin:3px 0 10px}
+      @media(max-width:650px){.side-game-picker{display:grid;grid-template-columns:1fr}.side-game-picker>button{width:100%}}
     `;document.head.appendChild(st);
   }
 
   document.addEventListener('change',e=>{
-    const sel=e.target.closest?.('#scoreSideGame');
+    const sel=e.target.closest?.('#scoreFortyBall,#scoreNassau');
     if(!sel)return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    handleScoreGameChange(sel);
+    if(sel.id==='scoreFortyBall')handleFortyChange(sel);
+    else handleNassauChange(sel);
   },true);
 
   ensureStyle();
@@ -305,7 +301,8 @@
     installSideGameOverride();
     priorRender();
     syncScorePicker();
+    setTimeout(appendCombinedNassauResults,0);
     setTimeout(appendSavedResults,0);
   };
-  setTimeout(()=>{installSideGameOverride();syncScorePicker();appendSavedResults();},0);
+  setTimeout(()=>{installSideGameOverride();syncScorePicker();appendCombinedNassauResults();appendSavedResults();},0);
 })();

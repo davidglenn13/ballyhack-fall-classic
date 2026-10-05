@@ -260,10 +260,6 @@ async function baseOperation(db,body,actor){
     }
     const result=await modifySetting(db,'sideGames',body.expectedRevision,current=>{current[String(round)]=body.value;return current});
     if(!result.ok)return result;
-    if(body.value==='None'||(before==='None'&&body.value==='40 Ball')){
-      const cleared=await mutateServerSetting(db,'fortyBallSelections',current=>{delete current[String(round)];return current});
-      if(!cleared.ok)return cleared;
-    }
     return result;
   }else if(op==='nassauGroup'){
     const round=Number(body.round),group=Number(body.group);if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid Nassau group'},400);
@@ -278,7 +274,6 @@ async function baseOperation(db,body,actor){
     const round=Number(body.round),group=Number(body.group);if(!(round>=1&&round<=4&&group>=1&&group<=2))return json({error:'Invalid Nassau bet group'},400);
     if(await isLocked(db,round,group))return json({error:'Unlock the scorecard before changing wagers'},423);
     const current=await setting(db,'nassauBets',{}),previous=current[round]?.[group]||{value:0,presses:[]},formats=await setting(db,'nassauGroups',{}),format=formats[round]?.[group];
-    const games=await setting(db,'sideGames',{});if(games[round]==='40 Ball')return json({error:'Nassau wagers are unavailable during 40 Ball'},409);
     const error=validateWagerChange({names:GROUPS[round][group],format,scores:await groupScores(db,round,group),previous,next:body.config,actor:actor?.player,admin:actor?.role==='admin'});
     if(error)return json({error},409);
     return modifySetting(db,'nassauBets',body.expectedRevision,value=>{value[String(round)]??={};value[String(round)][String(group)]=body.config;return value});

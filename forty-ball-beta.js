@@ -47,13 +47,12 @@
     if(!commissioner()&&ownGroup(r)&&g!==ownGroup(r))return;
 
     const pick=selMap(r,g), summary=groupSummary(r,g);
-    const picker=document.querySelector('#scoreSideGame');
+    const picker=document.querySelector('.side-game-picker');
     if(picker){
-      picker.value='40 Ball';
       const note=document.createElement('div');
       note.className='forty-ball-beta-note';
       note.innerHTML=`<div class="forty-tracker-title">40 Ball Tracker</div><div class="forty-tracker-stats"><div><strong>${summary.count}/40</strong><span>Scores</span></div><div><strong>${fmtRel(summary.rel)}</strong><span>Relative to Par</span></div></div>`;
-      picker.closest('.side-game-picker')?.insertAdjacentElement('afterend',note);
+      picker.insertAdjacentElement('afterend',note);
     }
 
     document.querySelectorAll('[data-score-player]').forEach(input=>{

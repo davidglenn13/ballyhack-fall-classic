@@ -91,9 +91,9 @@
   function counterPressFor(c,p){ return p?c.presses.find(x=>String(x.parentPressId||'')===String(p.id)):null; }
 
   function addWagerToPicker(r,g){
-    const picker=document.querySelector('.side-game-picker'),scoreSide=document.querySelector('#scoreSideGame');
+    const picker=document.querySelector('.side-game-picker'),scoreSide=document.querySelector('#scoreNassau');
     if(!picker||!scoreSide||!hasNassau(r,g)||picker.querySelector('.nlp-wager'))return;
-    const c=cfg(r,g),value=c.value,host=scoreSide.closest('div')||picker;
+    const c=cfg(r,g),value=c.value,host=scoreSide.closest('.side-game-control')||picker;
     host.insertAdjacentHTML('beforeend',`<label class="nlp-wager ${value?'':'needs-wager'}"><span class="wager-next">Next step: enter the wager for this side game</span><strong>Wager Amount</strong><span class="wager-entry"><span aria-hidden="true">$</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" data-nlp-wager data-r="${r}" data-g="${g}" value="${value||''}" aria-label="Nassau wager amount"></span></label>`);
   }
   function removeSideGameWagerInputs(){ document.querySelectorAll('.side-result-panel .nb-controls').forEach(x=>{const label=x.querySelector('label');if(label)label.remove();}); }
@@ -123,11 +123,10 @@
 
   function enhanceScore(){
     const app=document.querySelector('#app'); if(!app)return;
-    const scoreSide=document.querySelector('#scoreSideGame'); if(!scoreSide){removeSideGameWagerInputs();return;}
+    const scoreSide=document.querySelector('#scoreNassau'); if(!scoreSide){removeSideGameWagerInputs();return;}
     const r=+(sessionStorage.r||1),g=+(sessionStorage.group||1),h=+(sessionStorage.hole||1);
-    const selected=state.sideGames?.[r]||'None';
-    if(selected==='40 Ball'||selected==='None'||!hasNassau(r,g)){
-      document.querySelectorAll('.nlp-wager,.nlp-card').forEach(x=>x.remove());
+    if(!hasNassau(r,g)){
+      document.querySelectorAll('.nlp-wager,.nlp-card,.nlp-match-status').forEach(x=>x.remove());
       return;
     }
     addWagerToPicker(r,g);

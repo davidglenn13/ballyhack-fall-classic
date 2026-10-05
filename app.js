@@ -711,10 +711,15 @@ function score(){
   const par=PAR[h-1];
   const si=SI[h-1];
   const sideGame=state.sideGames[r]||'None';
-  const wagerAmount=sideGame==='40 Ball'
-    ?Number(state.fortyBallBets?.[r]||0)
-    :Number(state.nassauBets?.[r]?.[group]?.value||0);
-  const gameReady=sideGame!=='None'&&sideGameWasSelected(r,group)&&wagerAmount>0;
+  const fortyEnabled=sideGame==='40 Ball';
+  const nassauFormat=state.nassauGroups?.[r]?.[group]
+    ||state.nassauGroups?.[String(r)]?.[String(group)]
+    ||'';
+  const fortyReady=!fortyEnabled||Number(state.fortyBallBets?.[r]||0)>0;
+  const nassauReady=!nassauFormat||Number(state.nassauBets?.[r]?.[group]?.value||0)>0;
+  // Side games are optional. Only hold the setup panel above scoring when an
+  // enabled game still needs its wager; neither game selected is fully ready.
+  const gameReady=fortyReady&&nassauReady;
 
   const playerRows=names.map(n=>{
     const p=player(n);
@@ -827,32 +832,30 @@ function score(){
 
       <div class="side-game-picker">
 
-        <div>
+        <div class="side-game-control side-game-control-forty">
           <div class="eyebrow">
-            SIDE GAME FOR THIS ROUND
+            ROUND-WIDE GAME
           </div>
 
-          <select id="scoreSideGame">
-
-            <option
-              ${sideGame==='None'?'selected':''}
-            >
-              None
-            </option>
-
-            <option
-              ${sideGame==='40 Ball'?'selected':''}
-            >
-              40 Ball
-            </option>
-
-            <option
-              ${sideGame==='Nassau 5-5-5-3'?'selected':''}
-            >
-              Nassau 5-5-5-3
-            </option>
-
+          <label>40 Ball
+          <select id="scoreFortyBall">
+            <option value="off" ${sideGame!=='40 Ball'?'selected':''}>Off</option>
+            <option value="on" ${sideGame==='40 Ball'?'selected':''}>On</option>
           </select>
+          </label>
+          <div class="side-game-control-note">Applies to both groups for this round.</div>
+        </div>
+
+        <div class="side-game-control side-game-control-nassau">
+          <div class="eyebrow">GROUP GAME</div>
+          <label>Nassau
+          <select id="scoreNassau">
+            <option value="">None</option>
+            <option value="Nassau 5-5-5-1-1-1">5-5-5-1-1-1</option>
+            <option value="Nassau 6-6-6">6-6-6</option>
+          </select>
+          </label>
+          <div class="side-game-control-note">Configured separately for this group.</div>
         </div>
 
         <button
@@ -1471,79 +1474,6 @@ function bind(){
     ?.addEventListener('change',e=>{
       sessionStorage.group=e.target.value;
       sessionStorage.hole=1;
-      render();
-    });
-
-  document.querySelector('#scoreSideGame')
-    ?.addEventListener('change',e=>{
-      let r=+(sessionStorage.r||1);
-      const oldGame=state.sideGames[r]||'None';
-      const newGame=e.target.value;
-
-      if(oldGame!==newGame){
-        // Changing the side game invalidates the old wager. Do not carry money
-        // from one game into another; require a fresh wager for the new choice.
-        if(oldGame==='40 Ball'){
-          state.fortyBallBets??={};
-          state.fortyBallBets[r]=0;
-          apiPost({op:'fortyBallBet',round:r,value:0});
-        }else if(oldGame!=='None'){
-          state.nassauBets??={};
-          state.nassauBets[r]??={};
-          [1,2].forEach(group=>{
-            state.nassauBets[r][group]={value:0,presses:[]};
-            apiPost({
-              op:'nassauBetConfig',
-              round:r,
-              group,
-              config:{value:0,presses:[]}
-            });
-          });
-        }
-
-        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
-        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
-      }
-
-      // "None" is a hard reset for round side-game setup. Clear every wager
-      // type so selecting a game again always starts with a blank amount.
-      if(newGame==='None'){
-        state.fortyBallBets??={};
-        state.fortyBallBets[r]=0;
-        apiPost({op:'fortyBallBet',round:r,value:0});
-
-        state.nassauBets??={};
-        state.nassauBets[r]??={};
-        [1,2].forEach(group=>{
-          state.nassauBets[r][group]={value:0,presses:[]};
-          apiPost({
-            op:'nassauBetConfig',
-            round:r,
-            group,
-            config:{value:0,presses:[]}
-          });
-        });
-      }
-
-      state.sideGames[r]=newGame;
-      if(newGame==='None'){
-        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-'+sessionStorage.group);
-        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-1');
-        sessionStorage.removeItem('ballyhack-side-selected-'+r+'-2');
-      }else if(newGame==='40 Ball'){
-        sessionStorage.setItem('ballyhack-side-selected-'+r+'-1','1');
-        sessionStorage.setItem('ballyhack-side-selected-'+r+'-2','1');
-      }else{
-        sessionStorage.setItem('ballyhack-side-selected-'+r+'-'+sessionStorage.group,'1');
-      }
-      save();
-
-      apiPost({
-        op:'sideGame',
-        round:r,
-        value:newGame
-      });
-
       render();
     });
 
