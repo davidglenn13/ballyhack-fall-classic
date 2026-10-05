@@ -1999,12 +1999,58 @@ loadShared().finally(()=>{
   markAccess();
 });
 
-setInterval(async()=>{
-  if(document.visibilityState==='visible'){
-    const ok=await loadShared();
-    if(ok)render();
-  }
-},15000);
+let deferredBackgroundRender=false;
+
+function sharedStateSignature(){
+  return JSON.stringify({
+    scores:state.scores,
+    sideGames:state.sideGames,
+    fortyBallSelections:state.fortyBallSelections,
+    fortyBallBets:state.fortyBallBets,
+    fortyBallOfficialResults:state.fortyBallOfficialResults,
+    nassauGroups:state.nassauGroups,
+    nassauBets:state.nassauBets,
+    charges:state.charges,
+    locks:state.locks,
+    unlockRequests:state.unlockRequests,
+    frozen:state.frozen,
+    epoch:state.epoch,
+    photos:state.photos
+  });
+}
+
+function backgroundRenderBlocked(){
+  const active=document.activeElement;
+  const editing=active?.matches?.('input,textarea,select,[contenteditable="true"]');
+  const transientUi=document.querySelector(
+    '.gross-detail-backdrop,.sbc-chit-backdrop,.identity-overlay,'+
+    '.analytics-player-card[open]:not(.analytics-overall-card)'
+  );
+  return !!(editing||transientUi);
+}
+
+function renderPreservingViewport(){
+  const x=window.scrollX;
+  const y=window.scrollY;
+  render();
+  requestAnimationFrame(()=>window.scrollTo(x,y));
+}
+
+async function refreshSharedStateSafely(){
+  if(document.visibilityState!=='visible'||!navigator.onLine)return;
+  // Do not replace the in-memory score beneath a focused field or transient
+  // panel. This preserves both the visible interaction and stale-edit checks.
+  if(backgroundRenderBlocked())return;
+  const before=sharedStateSignature();
+  const ok=await loadShared();
+  if(!ok)return;
+  if(sharedStateSignature()!==before)deferredBackgroundRender=true;
+  if(!deferredBackgroundRender||backgroundRenderBlocked())return;
+  deferredBackgroundRender=false;
+  renderPreservingViewport();
+}
+
+setInterval(refreshSharedStateSafely,15000);
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker

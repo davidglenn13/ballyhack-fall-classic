@@ -585,7 +585,6 @@ identityGate=function(){
 window.addEventListener('online',flushQueue);
 window.addEventListener('offline',()=>setSync('Offline — new scores will be saved on this phone','pending'));
 setInterval(flushQueue,10000);
-setInterval(()=>{ if(authToken()&&navigator.onLine) loadShared(); },15000);
 setTimeout(()=>{
   render();
   identityGate();
