@@ -1047,6 +1047,9 @@ function board(){
 function cottage(){
   const privacy=typeof active40Privacy==='function'?active40Privacy():null;
   const rounds=COUNTING_ROUNDS;
+  const complete=rounds.every(r=>PLAYERS.every(p=>
+    PAR.every((_,i)=>+(state.scores?.[r]?.[p.name]?.[i+1]||0)>0)
+  ));
   let c1=rounds.map(r=>privacy&&r===privacy.round?null:cottageRound(1,r));
   let c2=rounds.map(r=>privacy&&r===privacy.round?null:cottageRound(2,r));
 
@@ -1055,8 +1058,10 @@ function cottage(){
 
   return layout(`
     <section class="card">
-      <div class="eyebrow">TEAM COMPETITION</div>
-      <h2 class="red">Cottage Cup</h2>
+      <div class="cottage-head">
+        <div><div class="eyebrow">TEAM COMPETITION</div><h2 class="red">Cottage Cup</h2></div>
+        <div class="live-badge ${complete?'complete':''}">${complete?'COMPLETE':'LIVE'}</div>
+      </div>
       <p>Track the team race between Cottage 1 and Cottage 2.</p>
       ${privacy?'<div class="permission-note">40 Ball privacy is active. Current-round Cottage Cup scoring is hidden until the round is complete.</div>':''}
     </section>

@@ -25,3 +25,8 @@ test('selected locked scorecard is labeled complete instead of live',()=>{
   assert.match(app,/scorecardComplete=!!state\.locks\?\.\[r\]\?\.\[group\]/);
   assert.match(app,/scorecardComplete\?'COMPLETE':'LIVE SCORING'/);
 });
+
+test('Cottage Cup status becomes complete only after every counting-round score exists',()=>{
+  assert.match(app,/const complete=rounds\.every\(r=>PLAYERS\.every\(p=>\s*PAR\.every/);
+  assert.match(app,/complete\?'COMPLETE':'LIVE'/);
+});
