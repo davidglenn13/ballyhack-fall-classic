@@ -20,3 +20,8 @@ test('only one 15-second shared-state poll remains',()=>{
   assert.equal((app.match(/setInterval\([^;]*15000\)/g)||[]).length,1);
   assert.doesNotMatch(safeguards,/setInterval\(\(\)=>\{ if\(authToken\(\)&&navigator\.onLine\) loadShared\(\); \},15000\)/);
 });
+
+test('selected locked scorecard is labeled complete instead of live',()=>{
+  assert.match(app,/scorecardComplete=!!state\.locks\?\.\[r\]\?\.\[group\]/);
+  assert.match(app,/scorecardComplete\?'COMPLETE':'LIVE SCORING'/);
+});

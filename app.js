@@ -731,6 +731,7 @@ function score(){
 
   const rd=ROUNDS[r-1];
   const names=roundGroupNames(r,group);
+  const scorecardComplete=!!state.locks?.[r]?.[group];
 
   const par=PAR[h-1];
   const si=SI[h-1];
@@ -805,8 +806,8 @@ function score(){
 
         </div>
 
-        <div class="live-badge">
-          LIVE SCORING
+        <div class="live-badge ${scorecardComplete?'complete':''}">
+          ${scorecardComplete?'COMPLETE':'LIVE SCORING'}
         </div>
       </div>
 
